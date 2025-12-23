@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title NEO Token
+ * @title NNET Token
  * @dev Main gas and governance token for NeoNet Web4 blockchain
  * Features:
  * - ERC20 with voting extensions for DualGov
@@ -32,7 +32,7 @@ contract NeoToken is ERC20, ERC20Burnable, AccessControl {
     event Unstaked(address indexed user, uint256 amount, uint256 rewards);
     event RewardsDistributed(address indexed validator, uint256 amount);
     
-    constructor() ERC20("NeoNet", "NEO") {
+    constructor() ERC20("NeoNet", "NNET") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
         _grantRole(VALIDATOR_ROLE, msg.sender);

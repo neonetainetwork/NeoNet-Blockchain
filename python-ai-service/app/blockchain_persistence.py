@@ -294,7 +294,7 @@ class BlockchainPersistence:
                     persisted_balance = blockchain.balances[USER_WALLET]
                     if persisted_balance < INITIAL_ALLOCATION and initial_user_balance >= INITIAL_ALLOCATION:
                         blockchain.balances[USER_WALLET] = initial_user_balance
-                        print(f"[Persistence] Preserved initial allocation of {INITIAL_ALLOCATION:,} NEO for user wallet")
+                        print(f"[Persistence] Preserved initial allocation of {INITIAL_ALLOCATION:,} NNET for user wallet")
                 
                 # Ensure burn address exists
                 if BURN_ADDRESS not in blockchain.balances:

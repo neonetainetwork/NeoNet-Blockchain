@@ -156,7 +156,7 @@ This protects against both classical and future quantum computer attacks.
 
 ### Token Economics
 - `GET /api/tokenomics` - EIP-1559 tokenomics info (burn rate, supply, rewards)
-- `GET /api/dex/price/NEO` - Current NEO price
+- `GET /api/dex/price/NNET` - Current NNET price
 
 ### AI Energy Mining
 - `POST /api/ai-energy/register` - Register as AI Energy Provider
@@ -166,7 +166,7 @@ This protects against both classical and future quantum computer attacks.
 
 ### Wallet
 - `GET /api/wallet/balances/{address}` - Get wallet balances
-- `POST /api/wallet/send` - Send NEO tokens
+- `POST /api/wallet/send` - Send NNET tokens
 
 ### DEX
 - `GET /api/dex/pools` - Get liquidity pools
@@ -200,8 +200,8 @@ This protects against both classical and future quantum computer attacks.
 
 ## Genesis Allocation
 
-- **Total Genesis**: 50,000,000 NEO
-- **User Allocation**: 30,000,000 NEO to `neo1dfa5ee86e6443115287e8a6c604cd8aa32d101`
+- **Total Genesis**: 50,000,000 NNET
+- **User Allocation**: 30,000,000 NNET to `neo1dfa5ee86e6443115287e8a6c604cd8aa32d101`
 - **AI Energy Pool**: Remaining supply for mining rewards
 
 ## License

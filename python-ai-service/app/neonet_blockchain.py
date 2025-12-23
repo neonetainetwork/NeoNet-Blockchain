@@ -189,7 +189,7 @@ class NeoNetBlockchain:
     INITIAL_NNET_PRICE = 5.0  # $5 starting price
     
     # EIP-1559 Style Fee Burning
-    BURN_ADDRESS = "neo1000000000000000000000000000000000dead"  # Burn address
+    BURN_ADDRESS = "nnet1000000000000000000000000000000000dead"  # Burn address
     BASE_FEE_BURN_RATE = 0.7  # 70% of base fee is burned
     PRIORITY_FEE_TO_PROVIDERS = 0.3  # 30% goes to AI Energy Providers
     

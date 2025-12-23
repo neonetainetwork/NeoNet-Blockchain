@@ -153,7 +153,7 @@ fn main() {
     chain.add_tx(Tx{
         from: "alice".into(), 
         to: "bob".into(), 
-        payload: "transfer 10 NEO".into(), 
+        payload: "transfer 10 NNET".into(), 
         nonce: 0
     });
     
@@ -163,7 +163,7 @@ fn main() {
     chain.add_tx(Tx{
         from: "bob".into(),
         to: "charlie".into(),
-        payload: "transfer 5 NEO".into(),
+        payload: "transfer 5 NNET".into(),
         nonce: 1
     });
     

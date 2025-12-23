@@ -1155,7 +1155,7 @@ class NeoNetDecentralizedDB:
                         provider_data.get('compute_power', 100)
                     )
             
-            # Sync all account balances (NEO) with integrity verification
+            # Sync all account balances (NNET) with integrity verification
             if hasattr(blockchain, 'balances'):
                 for address, balance in blockchain.balances.items():
                     balance_wei = int(balance * 1e18)
@@ -1211,7 +1211,7 @@ class NeoNetDecentralizedDB:
                 for pool_id, pool in blockchain.liquidity_pools.items():
                     pool_data = {
                         "id": pool_id,
-                        "token0": pool.get('token0', 'NEO'),
+                        "token0": pool.get('token0', 'NNET'),
                         "token1": pool.get('token1', 'USDT'),
                         "reserve0": pool.get('reserve0', 0),
                         "reserve1": pool.get('reserve1', 0)

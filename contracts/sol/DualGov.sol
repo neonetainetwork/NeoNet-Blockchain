@@ -91,7 +91,7 @@ contract DualGov is Ownable {
         address targetContract,
         bytes calldata callData
     ) external returns (uint256) {
-        require(neoToken.balanceOf(msg.sender) >= minProposalThreshold, "Insufficient NEO balance");
+        require(neoToken.balanceOf(msg.sender) >= minProposalThreshold, "Insufficient NNET balance");
         
         proposalCount++;
         

@@ -346,8 +346,8 @@ class NeoNetMiner:
         gas_info = await self.fetch_gas_info()
         if gas_info:
             print(f"[GAS] Network Fee Model: {gas_info.get('fee_model', 'Unknown')}")
-            print(f"[GAS] NEO Transfer Fee: {gas_info.get('neo_transfer_fee', 0):.6f} NEO")
-            print(f"[GAS] Token Transfer Fee: {gas_info.get('token_transfer_fee', 0):.6f} NEO")
+            print(f"[GAS] NNET Transfer Fee: {gas_info.get('neo_transfer_fee', 0):.6f} NNET")
+            print(f"[GAS] Token Transfer Fee: {gas_info.get('token_transfer_fee', 0):.6f} NNET")
             print(f"[GAS] Congestion Level: {gas_info.get('congestion_level', 'unknown')}")
             print(f"[GAS] Active Providers: {gas_info.get('active_providers', 0)}")
             print("-" * 60)
@@ -383,7 +383,7 @@ class NeoNetMiner:
                     if reward:
                         self.tasks_completed += 1
                         self.total_rewards += reward
-                        print(f"[REWARD] +{reward:.4f} NEO | Total: {self.total_rewards:.4f} NEO")
+                        print(f"[REWARD] +{reward:.4f} NNET | Total: {self.total_rewards:.4f} NNET")
                 
                 heartbeat_counter += 1
                 gas_update_counter += 1
@@ -391,7 +391,7 @@ class NeoNetMiner:
                 if heartbeat_counter >= 3:
                     hb = await self.send_heartbeat(self.tasks_completed)
                     if hb:
-                        print(f"[STATUS] Tasks: {self.tasks_completed} | Rewards: {self.total_rewards:.4f} NEO")
+                        print(f"[STATUS] Tasks: {self.tasks_completed} | Rewards: {self.total_rewards:.4f} NNET")
                     heartbeat_counter = 0
                 
                 # Update gas info every 15 cycles (~30 seconds)
@@ -401,7 +401,7 @@ class NeoNetMiner:
                         neo_fee = gas_info.get('neo_transfer_fee', 0)
                         congestion = gas_info.get('congestion_level', 'unknown')
                         providers = gas_info.get('active_providers', 0)
-                        print(f"[GAS] Fee: {neo_fee:.6f} NEO | Congestion: {congestion} | Providers: {providers}")
+                        print(f"[GAS] Fee: {neo_fee:.6f} NNET | Congestion: {congestion} | Providers: {providers}")
                     gas_update_counter = 0
                 
                 await asyncio.sleep(2)
@@ -415,7 +415,7 @@ class NeoNetMiner:
             print("    Mining Session Summary")
             print("=" * 60)
             print(f"Tasks Completed: {self.tasks_completed}")
-            print(f"Total Rewards: {self.total_rewards:.4f} NEO")
+            print(f"Total Rewards: {self.total_rewards:.4f} NNET")
             if summary:
                 print(f"Session Duration: {summary.get('duration_seconds', 0):.0f}s")
             print("=" * 60)

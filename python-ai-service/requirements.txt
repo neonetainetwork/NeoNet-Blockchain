@@ -5,7 +5,7 @@ pydantic
 redis
 sqlalchemy
 alembic
-aiohttp
+aiohttp>=3.10.0
 requests
 cryptography
 

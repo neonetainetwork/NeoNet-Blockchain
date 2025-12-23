@@ -55,7 +55,7 @@ python neonet_miner.py --server https://neonet.example.com --id my_miner_001
    - Model inference for fraud detection
    - Data hashing for blockchain verification
    - Tensor reduction for model aggregation
-4. **Earn Rewards** - Each completed task earns you NEO tokens
+4. **Earn Rewards** - Each completed task earns you NNET tokens
 
 ## Task Types & Rewards
 
@@ -99,8 +99,8 @@ CPU Cores: 8
 GPU: RTX 4090 (8192MB)
 ------------------------------------------------------------
 [GAS] Network Fee Model: EIP-1559 Dynamic
-[GAS] NEO Transfer Fee: 0.012453 NEO
-[GAS] Token Transfer Fee: 0.006227 NEO
+[GAS] NNET Transfer Fee: 0.012453 NNET
+[GAS] Token Transfer Fee: 0.006227 NNET
 [GAS] Congestion Level: medium
 [GAS] Active Providers: 5
 ------------------------------------------------------------
@@ -112,14 +112,14 @@ GPU: RTX 4090 (8192MB)
 
 [TASK] Processing: gradient_compute (ID: 7a8b9c0d...)
 [DONE] Computed in 156ms
-[REWARD] +0.0800 NEO | Total: 0.0800 NEO
+[REWARD] +0.0800 NNET | Total: 0.0800 NNET
 
 [TASK] Processing: matrix_multiply (ID: 1e2f3a4b...)
 [DONE] Computed in 89ms
-[REWARD] +0.0500 NEO | Total: 0.1300 NEO
+[REWARD] +0.0500 NNET | Total: 0.1300 NNET
 
-[STATUS] Tasks: 2 | Rewards: 0.1300 NEO
-[GAS] Fee: 0.011892 NEO | Congestion: medium | Providers: 6
+[STATUS] Tasks: 2 | Rewards: 0.1300 NNET
+[GAS] Fee: 0.011892 NNET | Congestion: medium | Providers: 6
 ```
 
 ## Network Gas Fees
@@ -127,8 +127,8 @@ GPU: RTX 4090 (8192MB)
 The miner displays real-time network gas fee information:
 
 - **Fee Model**: EIP-1559 Dynamic - fees adjust based on network conditions
-- **NEO Transfer Fee**: Current cost to send NEO tokens
-- **Token Transfer Fee**: Current cost to send other tokens (cheaper than NEO)
+- **NNET Transfer Fee**: Current cost to send NNET tokens
+- **Token Transfer Fee**: Current cost to send other tokens (cheaper than NNET)
 - **Congestion Level**: low/medium/high/very_high - affects fees
 - **Active Providers**: More miners = lower fees for users
 

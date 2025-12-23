@@ -281,7 +281,7 @@ class BlockchainPersistence:
         try:
             USER_WALLET = "neo1dfa5ee86e6443115287e8a6c604cd8aa32d101"
             INITIAL_ALLOCATION = 30_000_000
-            BURN_ADDRESS = "nnet1000000000000000000000000000000000dead"
+            BURN_ADDRESS = "neo1000000000000000000000000000000000dead"
             
             initial_user_balance = blockchain.balances.get(USER_WALLET, 0)
             

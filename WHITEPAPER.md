@@ -81,33 +81,59 @@ Powerful GPU (8+ CPU, 8GB+ GPU):
 
 ## 3. Dynamic Reward System
 
-### 3.1 Formula
+### 3.1 Why Dynamic Rewards?
 
-Rewards are distributed fairly based on active participants:
+**Problem**: If you pay a fixed reward (e.g., 1 NNET per task), and 1 million miners join, the token hyperinflates.
+
+**Solution**: "We pay not for the fact of work, but we divide a common pie. The pie is always the same size (no inflation), but there can be many eaters."
+
+### 3.2 Formula
 
 ```
-Reward_Per_Miner = Block_Budget / Active_Miners * Confidence_Multiplier
+Reward = Task_Weight × (Block_Budget / Active_Miners)
 
 Where:
-- Block_Budget = 1.0 NNET per block
-- Active_Miners = Current active energy providers
-- Confidence_Multiplier = 0.5 to 1.0 (based on AI accuracy)
+- Block_Budget = 10.0 NNET (fixed "pie" per block, every ~3 seconds)
+- Active_Miners = Current active energy providers (minimum 1)
+- Task_Weight = 0.30 to 1.00 (based on task difficulty)
+
+Caps:
+- Minimum: 0.001 NNET (prevents dust)
+- Maximum: 10.0 NNET (when alone)
 ```
 
-### 3.2 Examples
+### 3.3 Task Weights
 
-| Active Miners | Reward Per Miner |
-|---------------|------------------|
-| 1 | 1.00 NNET |
-| 5 | 0.20 NNET |
-| 10 | 0.10 NNET |
-| 21 | 0.047 NNET |
-| 100 | 0.01 NNET |
+| Task Type | Weight | Example (10 miners) |
+|-----------|--------|---------------------|
+| federated_learning | 1.00 | 1.00 NNET |
+| model_training | 0.80 | 0.80 NNET |
+| network_protection | 0.60 | 0.60 NNET |
+| fraud_detection | 0.50 | 0.50 NNET |
+| gradient_compute | 0.50 | 0.50 NNET |
+| inference | 0.40 | 0.40 NNET |
+| data_validation | 0.30 | 0.30 NNET |
+| matrix_ops | 0.30 | 0.30 NNET |
 
-### 3.3 Caps
+### 3.4 Reward Examples
 
-- **Minimum Reward**: 0.001 NNET (to prevent dust)
-- **Maximum Reward**: 1.00 NNET (when alone)
+| Active Miners | Base Rate | federated_learning | fraud_detection |
+|---------------|-----------|-------------------|-----------------|
+| 1 | 10.00 NNET | 10.00 NNET | 5.00 NNET |
+| 5 | 2.00 NNET | 2.00 NNET | 1.00 NNET |
+| 10 | 1.00 NNET | 1.00 NNET | 0.50 NNET |
+| 50 | 0.20 NNET | 0.20 NNET | 0.10 NNET |
+| 100 | 0.10 NNET | 0.10 NNET | 0.05 NNET |
+| 500 | 0.02 NNET | 0.02 NNET | 0.01 NNET |
+| 1000 | 0.01 NNET | 0.01 NNET | 0.005 NNET |
+| 1,000,000 | 0.00001 NNET | 0.00001 NNET | 0.000005 NNET |
+
+### 3.5 Economic Properties
+
+1. **Anti-Hyperinflation**: No matter how many miners join, total issuance per block stays constant
+2. **Early Adopter Advantage**: First miners earn significantly more
+3. **Self-Balancing**: High rewards attract miners → rewards decrease → equilibrium
+4. **Fair Distribution**: Larger computing power earns proportionally more
 
 ---
 

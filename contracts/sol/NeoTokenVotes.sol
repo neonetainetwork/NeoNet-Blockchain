@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NeoTokenVotes is ERC20Votes, Ownable {
-    constructor(uint256 initialSupply) ERC20("NeoToken", "NEO") ERC20Permit("NeoToken") {
+    constructor(uint256 initialSupply) ERC20("NeoToken", "NNET") ERC20Permit("NeoToken") {
         _mint(msg.sender, initialSupply);
     }
 

@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-NeoNet One-Click Miner (NNET)
-Simple GUI for mining NNET tokens
+NeoNet Energy Provider (NNET)
+Simple GUI for providing energy to NeoNet network
 
-Features:
-- One-click mining start
-- No technical knowledge required
-- Dynamic rewards based on active miners
-- Real-time stats display
+HOW IT WORKS:
+- You DON'T mine or compute anything
+- You just provide "energy" (stay connected)
+- AI does all the work (training, protection, validation)
+- You get rewarded for being online
 
 Usage:
 1. Enter your wallet address (neo1... or 0x...)
-2. Click START MINING
-3. Earn NNET tokens!
+2. Click START
+3. Stay connected and earn NNET!
 
 To build .exe:
     pip install pyinstaller
-    pyinstaller --onefile --noconsole --name NeoNetMiner neonet_miner_gui.py
+    pyinstaller --onefile --noconsole --name NeoNetEnergy neonet_miner_gui.py
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -24,10 +24,7 @@ import threading
 import asyncio
 import aiohttp
 import time
-import hashlib
-import platform
 import os
-import sys
 import webbrowser
 from typing import Optional
 
@@ -39,23 +36,24 @@ NEONET_SERVERS = [
 
 DEFAULT_SERVER = NEONET_SERVERS[0]
 
-class NeoNetMinerGUI:
+class NeoNetEnergyGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("NeoNet Miner - NNET")
-        self.root.geometry("500x650")
+        self.root.title("NeoNet Energy Provider - NNET")
+        self.root.geometry("500x700")
         self.root.resizable(False, False)
         
         self.root.configure(bg='#1a1a2e')
         
-        self.is_mining = False
+        self.is_providing = False
         self.session_id = None
-        self.tasks_completed = 0
+        self.blocks_contributed = 0
         self.total_rewards = 0.0
-        self.active_miners = 1
+        self.active_providers = 1
         self.current_reward_rate = 10.0
-        self.mining_thread = None
+        self.energy_thread = None
         self.loop = None
+        self.uptime_seconds = 0
         
         self.server_url = DEFAULT_SERVER
         
@@ -67,8 +65,8 @@ class NeoNetMinerGUI:
         
         title = tk.Label(
             title_frame, 
-            text="⚡ NeoNet Miner",
-            font=("Arial", 28, "bold"),
+            text="NeoNet Energy Provider",
+            font=("Arial", 26, "bold"),
             fg='#00d9ff',
             bg='#1a1a2e'
         )
@@ -76,15 +74,35 @@ class NeoNetMinerGUI:
         
         subtitle = tk.Label(
             title_frame,
-            text="AI-Powered Web4 Mining",
+            text="AI Does The Work - You Provide Energy",
             font=("Arial", 12),
             fg='#888888',
             bg='#1a1a2e'
         )
         subtitle.pack()
         
+        info_frame = tk.Frame(self.root, bg='#2a2a4e', relief='flat')
+        info_frame.pack(pady=10, padx=30, fill='x')
+        
+        info_text = tk.Label(
+            info_frame,
+            text="Your computer does NOTHING heavy.\n" +
+                 "Just stay connected. AI handles:\n" +
+                 "- Training models\n" +
+                 "- Protecting network\n" +
+                 "- Validating transactions\n" +
+                 "You get rewarded for being online!",
+            font=("Arial", 10),
+            fg='#aaaaaa',
+            bg='#2a2a4e',
+            justify='left',
+            padx=15,
+            pady=10
+        )
+        info_text.pack()
+        
         wallet_frame = tk.Frame(self.root, bg='#1a1a2e')
-        wallet_frame.pack(pady=20, padx=30, fill='x')
+        wallet_frame.pack(pady=15, padx=30, fill='x')
         
         wallet_label = tk.Label(
             wallet_frame,
@@ -107,21 +125,12 @@ class NeoNetMinerGUI:
         self.wallet_entry.pack(fill='x', pady=5, ipady=10)
         self.wallet_entry.insert(0, "neo1...")
         
-        hint = tk.Label(
-            wallet_frame,
-            text="Enter your neo1... or 0x... address",
-            font=("Arial", 9),
-            fg='#666666',
-            bg='#1a1a2e'
-        )
-        hint.pack(anchor='w')
-        
         button_frame = tk.Frame(self.root, bg='#1a1a2e')
-        button_frame.pack(pady=20)
+        button_frame.pack(pady=15)
         
         self.start_button = tk.Button(
             button_frame,
-            text="▶ START MINING",
+            text="PROVIDE ENERGY",
             font=("Arial", 18, "bold"),
             bg='#00d900',
             fg='white',
@@ -131,13 +140,13 @@ class NeoNetMinerGUI:
             width=20,
             height=2,
             cursor='hand2',
-            command=self.toggle_mining
+            command=self.toggle_providing
         )
         self.start_button.pack()
         
         self.status_label = tk.Label(
             self.root,
-            text="🔴 Stopped",
+            text="Offline",
             font=("Arial", 16, "bold"),
             fg='#ff4444',
             bg='#1a1a2e'
@@ -145,11 +154,11 @@ class NeoNetMinerGUI:
         self.status_label.pack(pady=10)
         
         stats_frame = tk.Frame(self.root, bg='#2a2a4e', relief='flat')
-        stats_frame.pack(pady=20, padx=30, fill='x')
+        stats_frame.pack(pady=15, padx=30, fill='x')
         
         stats_title = tk.Label(
             stats_frame,
-            text="Mining Statistics",
+            text="Your Contribution",
             font=("Arial", 14, "bold"),
             fg='#00d9ff',
             bg='#2a2a4e'
@@ -159,14 +168,23 @@ class NeoNetMinerGUI:
         stats_inner = tk.Frame(stats_frame, bg='#2a2a4e')
         stats_inner.pack(padx=20, pady=10, fill='x')
         
-        self.tasks_label = tk.Label(
+        self.uptime_label = tk.Label(
             stats_inner,
-            text="Tasks Completed: 0",
+            text="Uptime: 0:00:00",
             font=("Arial", 12),
             fg='#ffffff',
             bg='#2a2a4e'
         )
-        self.tasks_label.pack(anchor='w', pady=2)
+        self.uptime_label.pack(anchor='w', pady=2)
+        
+        self.blocks_label = tk.Label(
+            stats_inner,
+            text="Blocks Contributed: 0",
+            font=("Arial", 12),
+            fg='#ffffff',
+            bg='#2a2a4e'
+        )
+        self.blocks_label.pack(anchor='w', pady=2)
         
         self.rewards_label = tk.Label(
             stats_inner,
@@ -177,46 +195,45 @@ class NeoNetMinerGUI:
         )
         self.rewards_label.pack(anchor='w', pady=2)
         
-        self.miners_label = tk.Label(
+        self.providers_label = tk.Label(
             stats_inner,
-            text="Active Miners: 1",
+            text="Active Providers: 1",
             font=("Arial", 12),
             fg='#aaaaaa',
             bg='#2a2a4e'
         )
-        self.miners_label.pack(anchor='w', pady=2)
+        self.providers_label.pack(anchor='w', pady=2)
         
         self.rate_label = tk.Label(
             stats_inner,
-            text="Current Rate: 10.0 NNET/task",
+            text="Current Rate: 10.0 NNET/block",
             font=("Arial", 12),
             fg='#ffaa00',
             bg='#2a2a4e'
         )
         self.rate_label.pack(anchor='w', pady=2)
         
-        self.task_label = tk.Label(
+        self.ai_status_label = tk.Label(
             stats_inner,
-            text="Current Task: None",
+            text="AI Status: Idle",
             font=("Arial", 10),
             fg='#888888',
             bg='#2a2a4e'
         )
-        self.task_label.pack(anchor='w', pady=5)
+        self.ai_status_label.pack(anchor='w', pady=5)
         
-        info_frame = tk.Frame(self.root, bg='#1a1a2e')
-        info_frame.pack(pady=10, padx=30, fill='x')
+        network_frame = tk.Frame(self.root, bg='#1a1a2e')
+        network_frame.pack(pady=10, padx=30, fill='x')
         
-        info_text = tk.Label(
-            info_frame,
-            text="Dynamic Rewards: More miners = lower rewards\n" +
-                 "Formula: Reward = Weight × (Budget / Miners)",
-            font=("Arial", 9),
+        network_info = tk.Label(
+            network_frame,
+            text="Network Speed: ~3,000 TPS | Block Time: ~3 sec",
+            font=("Arial", 10),
             fg='#666666',
             bg='#1a1a2e',
             justify='center'
         )
-        info_text.pack()
+        network_info.pack()
         
         links_frame = tk.Frame(self.root, bg='#1a1a2e')
         links_frame.pack(pady=10)
@@ -247,97 +264,108 @@ class NeoNetMinerGUI:
         
         version_label = tk.Label(
             self.root,
-            text="v1.0.0 | NeoNet AI Network",
+            text="v1.1.0 | NeoNet AI Network",
             font=("Arial", 9),
             fg='#444444',
             bg='#1a1a2e'
         )
         version_label.pack(side='bottom', pady=10)
     
-    def toggle_mining(self):
-        if self.is_mining:
-            self.stop_mining()
+    def toggle_providing(self):
+        if self.is_providing:
+            self.stop_providing()
         else:
-            self.start_mining()
+            self.start_providing()
     
-    def start_mining(self):
+    def start_providing(self):
         wallet = self.wallet_entry.get().strip()
         
         if not wallet or wallet == "neo1..." or len(wallet) < 10:
             messagebox.showerror("Error", "Please enter a valid wallet address (neo1... or 0x...)")
             return
         
-        self.is_mining = True
-        self.start_button.config(text="⏹ STOP MINING", bg='#ff4444')
-        self.status_label.config(text="🟢 Mining...", fg='#00ff00')
+        self.is_providing = True
+        self.uptime_seconds = 0
+        self.start_button.config(text="DISCONNECT", bg='#ff4444')
+        self.status_label.config(text="Providing Energy...", fg='#00ff00')
         
-        self.mining_thread = threading.Thread(target=self.mining_loop, args=(wallet,), daemon=True)
-        self.mining_thread.start()
+        self.energy_thread = threading.Thread(target=self.energy_loop, args=(wallet,), daemon=True)
+        self.energy_thread.start()
     
-    def stop_mining(self):
-        self.is_mining = False
-        self.start_button.config(text="▶ START MINING", bg='#00d900')
-        self.status_label.config(text="🔴 Stopped", fg='#ff4444')
+    def stop_providing(self):
+        self.is_providing = False
+        self.start_button.config(text="PROVIDE ENERGY", bg='#00d900')
+        self.status_label.config(text="Offline", fg='#ff4444')
+        self.ai_status_label.config(text="AI Status: Idle")
     
-    def mining_loop(self, wallet: str):
+    def energy_loop(self, wallet: str):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         
         try:
-            self.loop.run_until_complete(self.async_mining_loop(wallet))
+            self.loop.run_until_complete(self.async_energy_loop(wallet))
         except Exception as e:
-            print(f"Mining error: {e}")
+            print(f"Energy error: {e}")
         finally:
             self.loop.close()
     
-    async def async_mining_loop(self, wallet: str):
+    async def async_energy_loop(self, wallet: str):
         contributor_id = wallet.lower()
         
-        registered = await self.register_miner(contributor_id)
+        registered = await self.register_provider(contributor_id)
         if not registered:
-            self.root.after(0, lambda: self.stop_mining())
-            self.root.after(0, lambda: messagebox.showerror("Error", "Failed to register with network"))
+            self.root.after(0, lambda: self.stop_providing())
+            self.root.after(0, lambda: messagebox.showerror("Error", "Failed to connect to network"))
             return
         
         session_started = await self.start_session(contributor_id)
         if not session_started:
-            self.root.after(0, lambda: self.stop_mining())
+            self.root.after(0, lambda: self.stop_providing())
             self.root.after(0, lambda: messagebox.showerror("Error", "Failed to start session"))
             return
         
-        while self.is_mining:
+        ai_activities = [
+            "Training fraud detection model...",
+            "Validating transactions...",
+            "Protecting network...",
+            "Optimizing gas fees...",
+            "Running federated learning...",
+            "Processing blocks...",
+            "Updating state trie...",
+            "Verifying signatures..."
+        ]
+        activity_index = 0
+        
+        while self.is_providing:
             try:
-                task = await self.fetch_task(contributor_id)
+                self.uptime_seconds += 3
                 
-                if task and task.get("task_id"):
-                    self.root.after(0, lambda t=task: self.task_label.config(
-                        text=f"Current Task: {t.get('task_type', 'unknown')}"
-                    ))
-                    
-                    result = self.process_task(task)
-                    
-                    reward = await self.submit_result(contributor_id, task, result)
-                    
-                    if reward > 0:
-                        self.tasks_completed += 1
-                        self.total_rewards += reward
-                        
-                        self.root.after(0, self.update_stats)
+                reward = await self.send_heartbeat(contributor_id)
                 
-                await asyncio.sleep(2)
+                if reward > 0:
+                    self.blocks_contributed += 1
+                    self.total_rewards += reward
+                
+                activity_index = (activity_index + 1) % len(ai_activities)
+                self.root.after(0, lambda a=ai_activities[activity_index]: 
+                    self.ai_status_label.config(text=f"AI: {a}"))
+                
+                self.root.after(0, self.update_stats)
+                
+                await asyncio.sleep(3)
                 
             except Exception as e:
-                print(f"Task error: {e}")
+                print(f"Heartbeat error: {e}")
                 await asyncio.sleep(5)
     
-    async def register_miner(self, contributor_id: str) -> bool:
+    async def register_provider(self, contributor_id: str) -> bool:
         async with aiohttp.ClientSession() as session:
             try:
                 payload = {
                     "contributor_id": contributor_id,
-                    "cpu_cores": os.cpu_count() or 4,
+                    "cpu_cores": 1,
                     "gpu_memory_mb": 0,
-                    "gpu_model": "CPU Only"
+                    "gpu_model": "Energy Only"
                 }
                 async with session.post(
                     f"{self.server_url}/ai-energy/register",
@@ -366,75 +394,41 @@ class NeoNetMinerGUI:
                 print(f"Session error: {e}")
                 return False
     
-    async def fetch_task(self, contributor_id: str) -> Optional[dict]:
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(
-                    f"{self.server_url}/ai-energy/task/{contributor_id}",
-                    timeout=aiohttp.ClientTimeout(total=30)
-                ) as resp:
-                    if resp.status == 200:
-                        task = await resp.json()
-                        self.active_miners = task.get("active_miners_at_creation", 1)
-                        self.current_reward_rate = task.get("reward", 1.0)
-                        return task
-                    return None
-            except Exception as e:
-                print(f"Fetch error: {e}")
-                return None
-    
-    def process_task(self, task: dict) -> dict:
-        task_type = task.get("task_type", "unknown")
-        task_data = task.get("data", {})
-        
-        time.sleep(0.5)
-        
-        result_hash = hashlib.sha256(f"{task_type}{time.time()}".encode()).hexdigest()[:16]
-        
-        results = {
-            "fraud_detection": {"results_hash": result_hash, "fraud_detected": False},
-            "model_training": {"weights_hash": result_hash, "loss": 0.01},
-            "network_protection": {"blocks_validated": 5, "anomalies": 0},
-            "data_validation": {"integrity_score": 0.99, "records": 100},
-            "inference": {"output_hash": result_hash, "predictions": 10},
-            "federated_learning": {"weights_hash": result_hash, "rounds": 3},
-            "gradient_compute": {"gradient_hash": result_hash, "norm": 0.5},
-            "matrix_ops": {"result_hash": result_hash, "ops": 1000}
-        }
-        
-        return results.get(task_type, {"result_hash": result_hash})
-    
-    async def submit_result(self, contributor_id: str, task: dict, result: dict) -> float:
+    async def send_heartbeat(self, contributor_id: str) -> float:
         async with aiohttp.ClientSession() as session:
             try:
                 payload = {
                     "contributor_id": contributor_id,
-                    "session_id": self.session_id,
-                    "task_id": task.get("task_id"),
-                    "result": result
+                    "session_id": self.session_id
                 }
                 async with session.post(
-                    f"{self.server_url}/ai-energy/submit-result",
+                    f"{self.server_url}/ai-energy/heartbeat",
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
+                        self.active_providers = data.get("active_providers", 1)
+                        self.current_reward_rate = data.get("reward_per_block", 10.0)
                         return data.get("reward", 0.0)
                     return 0.0
             except Exception as e:
-                print(f"Submit error: {e}")
+                print(f"Heartbeat error: {e}")
                 return 0.0
     
     def update_stats(self):
-        self.tasks_label.config(text=f"Tasks Completed: {self.tasks_completed}")
+        hours = self.uptime_seconds // 3600
+        minutes = (self.uptime_seconds % 3600) // 60
+        seconds = self.uptime_seconds % 60
+        self.uptime_label.config(text=f"Uptime: {hours}:{minutes:02d}:{seconds:02d}")
+        self.blocks_label.config(text=f"Blocks Contributed: {self.blocks_contributed}")
         self.rewards_label.config(text=f"Total Earned: {self.total_rewards:.4f} NNET")
-        self.miners_label.config(text=f"Active Miners: {self.active_miners}")
-        self.rate_label.config(text=f"Current Rate: {self.current_reward_rate:.4f} NNET/task")
+        self.providers_label.config(text=f"Active Providers: {self.active_providers}")
+        self.rate_label.config(text=f"Current Rate: {self.current_reward_rate:.4f} NNET/block")
 
 def main():
     root = tk.Tk()
-    app = NeoNetMinerGUI(root)
+    app = NeoNetEnergyGUI(root)
     root.mainloop()
 
 if __name__ == "__main__":

@@ -3270,18 +3270,75 @@ async def claim_staking_rewards_deprecated(req: dict):
 GENESIS_TIMESTAMP = 1733299200  # December 4, 2025 00:00:00 UTC
 GENESIS_SUPPLY = 50_000_000.0  # Starting supply
 
-# AI Energy Mining Rewards - Generous rewards for powering the network
-# Higher rewards attract more energy providers to keep the AI network running
-BASE_REWARDS = {
-    "fraud_detection": 0.50,      # Was 0.05 - 10x increase
-    "model_training": 0.80,       # Was 0.08 - 10x increase  
-    "network_protection": 0.60,   # Was 0.06 - 10x increase
-    "data_validation": 0.30,      # Was 0.03 - 10x increase
-    "inference": 0.40,            # Was 0.04 - 10x increase
-    "federated_learning": 1.00,   # Was 0.10 - 10x increase (highest reward)
-    "gradient_compute": 0.50,     # Was 0.05 - 10x increase
-    "matrix_ops": 0.30            # Was 0.03 - 10x increase
+# AI Energy Mining Rewards - DYNAMIC based on active miners
+# Formula: Reward = Base_Weight * (Block_Budget / Active_Miners)
+# Many miners = lower individual reward (prevents hyperinflation)
+# Few miners = higher individual reward (incentivizes joining)
+
+BLOCK_BUDGET = 10.0  # Total NNET distributed per "block" (every ~3 seconds)
+MIN_REWARD_PER_MINER = 0.001  # Minimum reward to prevent dust
+MAX_REWARD_PER_MINER = 10.0  # Maximum reward when alone (cap)
+
+# Task weight multipliers (relative difficulty/value)
+TASK_WEIGHTS = {
+    "fraud_detection": 0.50,
+    "model_training": 0.80,
+    "network_protection": 0.60,
+    "data_validation": 0.30,
+    "inference": 0.40,
+    "federated_learning": 1.00,  # Hardest task = highest weight
+    "gradient_compute": 0.50,
+    "matrix_ops": 0.30
 }
+
+def calculate_dynamic_reward(task_type: str) -> float:
+    """
+    Dynamic Reward Calculation (Protocol NeoNet Genesis)
+    
+    Formula: Reward = Task_Weight * (Block_Budget / Active_Miners)
+    
+    Examples:
+    - 1 miner:   1.0 * (10.0 / 1) = 10.0 NNET (capped at MAX)
+    - 10 miners: 1.0 * (10.0 / 10) = 1.0 NNET
+    - 100 miners: 1.0 * (10.0 / 100) = 0.1 NNET
+    - 1000 miners: 1.0 * (10.0 / 1000) = 0.01 NNET
+    
+    This ensures network doesn't hyperinflate with many miners,
+    but early adopters get higher rewards.
+    """
+    active_miners = len([c for c in ai_energy_contributors.values() if c.get("is_active", False)])
+    active_miners = max(1, active_miners)  # Prevent division by zero
+    
+    base_reward_per_miner = BLOCK_BUDGET / active_miners
+    base_reward_per_miner = max(MIN_REWARD_PER_MINER, min(MAX_REWARD_PER_MINER, base_reward_per_miner))
+    
+    task_weight = TASK_WEIGHTS.get(task_type, 0.5)
+    
+    dynamic_reward = base_reward_per_miner * task_weight
+    
+    return round(dynamic_reward, 6)
+
+def get_current_reward_rate() -> dict:
+    """Get current reward rate based on active miners"""
+    active_miners = len([c for c in ai_energy_contributors.values() if c.get("is_active", False)])
+    active_miners = max(1, active_miners)
+    
+    base_reward = BLOCK_BUDGET / active_miners
+    base_reward = max(MIN_REWARD_PER_MINER, min(MAX_REWARD_PER_MINER, base_reward))
+    
+    return {
+        "active_miners": active_miners,
+        "block_budget": BLOCK_BUDGET,
+        "base_reward_per_miner": round(base_reward, 6),
+        "formula": "Reward = Task_Weight * (Block_Budget / Active_Miners)",
+        "rewards_by_task": {
+            task: round(base_reward * weight, 6)
+            for task, weight in TASK_WEIGHTS.items()
+        }
+    }
+
+# Legacy compatibility - maps to dynamic calculation
+BASE_REWARDS = TASK_WEIGHTS
 
 def get_network_tokenomics() -> dict:
     """Get network tokenomics stats (Ethereum EIP-1559 style)"""
@@ -3477,23 +3534,28 @@ def _create_ai_energy_task(session_id: str, contributor_id: str = None) -> dict:
     
     config = random.choice(task_configs)
     
-    # Ethereum-style: full base reward (no halving, balanced by tx fee burning)
-    actual_reward = config["base_reward"]
+    # DYNAMIC REWARD: Calculate based on active miners count
+    # Formula: Reward = Task_Weight * (Block_Budget / Active_Miners)
+    task_type = config["task_type"]
+    dynamic_reward = calculate_dynamic_reward(task_type)
+    reward_info = get_current_reward_rate()
     
     task = {
         "task_id": task_id,
         "session_id": session_id,
         "contributor_id": contributor_id,
-        "task_type": config["task_type"],
+        "task_type": task_type,
         "data": config["data"],
         "description": config["description"],
         "created_at": int(time.time()),
         "status": "assigned",
-        "base_reward": config["base_reward"],
-        "reward": actual_reward,
+        "task_weight": config["base_reward"],  # Weight multiplier
+        "reward": dynamic_reward,  # Dynamic based on miners
         "reward_type": "issuance",  # New NNET tokens minted
         "difficulty": random.randint(1, 5),
-        "timeout_seconds": 60
+        "timeout_seconds": 60,
+        "active_miners_at_creation": reward_info["active_miners"],
+        "reward_formula": "Task_Weight * (Block_Budget / Active_Miners)"
     }
     
     ai_energy_tasks[task_id] = task
@@ -3771,14 +3833,60 @@ async def ai_energy_get_contributor(contributor_id: str):
 async def ai_energy_tokenomics():
     """Get network tokenomics information (Ethereum EIP-1559 style)"""
     tokenomics = get_network_tokenomics()
+    reward_rate = get_current_reward_rate()
     
     return {
         **tokenomics,
-        "base_rewards": BASE_REWARDS,
+        "dynamic_rewards": reward_rate,
+        "task_weights": TASK_WEIGHTS,
+        "block_budget": BLOCK_BUDGET,
+        "reward_limits": {
+            "min_per_miner": MIN_REWARD_PER_MINER,
+            "max_per_miner": MAX_REWARD_PER_MINER
+        },
         "reward_type": "issuance",
         "burn_mechanism": "EIP-1559 style - 70% of transaction fees burned",
         "supply_model": "dynamic",
-        "description": "Ethereum-style tokenomics: AI mining rewards issued as new NNET, balanced by transaction fee burning. Network can be inflationary or deflationary based on activity."
+        "description": "Dynamic rewards: Reward = Task_Weight * (Block_Budget / Active_Miners). More miners = lower individual rewards. Balanced by transaction fee burning."
+    }
+
+@app.get("/api/rewards/current")
+async def get_current_rewards():
+    """
+    Get current dynamic reward rates based on active miners.
+    
+    Formula: Reward = Task_Weight * (Block_Budget / Active_Miners)
+    
+    Examples:
+    - 1 miner:   federated_learning pays 10.0 NNET
+    - 10 miners: federated_learning pays 1.0 NNET
+    - 100 miners: federated_learning pays 0.1 NNET
+    - 1000 miners: federated_learning pays 0.01 NNET
+    """
+    reward_rate = get_current_reward_rate()
+    
+    examples = []
+    for miners in [1, 5, 10, 50, 100, 500, 1000]:
+        base = BLOCK_BUDGET / miners
+        base = max(MIN_REWARD_PER_MINER, min(MAX_REWARD_PER_MINER, base))
+        examples.append({
+            "miners": miners,
+            "base_reward": round(base, 4),
+            "federated_learning": round(base * 1.0, 4),
+            "model_training": round(base * 0.8, 4),
+            "fraud_detection": round(base * 0.5, 4)
+        })
+    
+    return {
+        "formula": "Reward = Task_Weight * (Block_Budget / Active_Miners)",
+        "block_budget": BLOCK_BUDGET,
+        "limits": {
+            "min": MIN_REWARD_PER_MINER,
+            "max": MAX_REWARD_PER_MINER
+        },
+        "current_state": reward_rate,
+        "why_dynamic": "Prevents hyperinflation with 1 million miners, rewards early adopters",
+        "examples": examples
     }
 
 @app.get("/ai-energy/leaderboard")

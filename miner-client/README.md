@@ -1,154 +1,119 @@
-# NeoNet AI Miner (NNET)
+# NeoNet Miner Client (NNET)
 
-Connect your computer to the NeoNet network and earn NNET tokens by providing AI computing power.
+One-Click AI Mining for the NeoNet Web4 Blockchain.
 
-**Even weak laptops can participate!** AI assigns appropriate tasks based on your hardware.
+## Dynamic Rewards System
 
-## Quick Start
+NeoNet uses **dynamic rewards** that adjust based on active miners:
 
-### 1. Install Dependencies
+```
+Formula: Reward = Task_Weight × (Block_Budget / Active_Miners)
 
-```bash
-pip install -r requirements.txt
+Block_Budget = 10.0 NNET (fixed "pie" per block)
+Task_Weight = 0.30 to 1.00 (based on task difficulty)
+
+Examples:
+- 1 miner:    federated_learning = 10.0 NNET (max)
+- 10 miners:  federated_learning = 1.0 NNET
+- 100 miners: federated_learning = 0.1 NNET
+- 1000 miners: federated_learning = 0.01 NNET
+- 1M miners:  federated_learning = 0.00001 NNET
 ```
 
-### 2. Run the Miner
+**Why dynamic?** Prevents hyperinflation with millions of miners while rewarding early adopters.
+
+## One-Click GUI Miner (Recommended)
+
+### Windows/Mac/Linux
+
+1. Install Python 3.8+
+2. Install dependencies:
+   ```bash
+   pip install aiohttp numpy
+   ```
+3. Run the GUI miner:
+   ```bash
+   python neonet_miner_gui.py
+   ```
+4. Enter your wallet address (neo1... or 0x...)
+5. Click **START MINING**
+
+### Build Standalone .exe (Windows)
 
 ```bash
-python neonet_miner.py --server https://YOUR_NEONET_SERVER
+pip install pyinstaller
+pyinstaller --onefile --noconsole --name NeoNetMiner neonet_miner_gui.py
 ```
 
-### Command Line Options
+The executable will be in the `dist/` folder.
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--server` | NeoNet server URL | http://localhost:8000 |
-| `--id` | Your miner ID (auto-generated if not set) | random |
-| `--cpu` | Number of CPU cores to use | 4 |
-| `--gpu-mem` | GPU memory in MB (0 = no GPU) | 0 |
-| `--gpu-model` | GPU model name | "" |
+## Command Line Miner (Advanced)
 
-### Examples
+For servers and advanced users:
 
-**Basic CPU Mining:**
 ```bash
-python neonet_miner.py --server https://neonet.example.com --cpu 8
+python neonet_miner.py --wallet neo1abc123... --server https://neonet-ai-blockchain-neonetainetwork.replit.app
 ```
 
-**GPU Mining (NVIDIA):**
-```bash
-python neonet_miner.py --server https://neonet.example.com --gpu-mem 8192 --gpu-model "RTX 4090"
-```
+### Options
 
-**Custom Miner ID:**
-```bash
-python neonet_miner.py --server https://neonet.example.com --id my_miner_001
-```
-
-## How It Works
-
-1. **Register** - Your miner connects to NeoNet and registers its hardware specs
-2. **Start Session** - A mining session begins and tasks are assigned
-3. **Process Tasks** - Your computer processes real AI workloads:
-   - Matrix multiplication for neural networks
-   - Gradient computation for model training
-   - Model inference for fraud detection
-   - Data hashing for blockchain verification
-   - Tensor reduction for model aggregation
-4. **Earn Rewards** - Each completed task earns you NNET tokens
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--wallet` | Your wallet address | Required |
+| `--server` | NeoNet server URL | Auto-detect |
+| `--cpu` | CPU cores to use | Auto-detect |
+| `--gpu-memory` | GPU memory in MB | 0 |
 
 ## Task Types & Rewards
 
-The miner processes AI tasks with dynamic reward distribution:
+Rewards are calculated dynamically: `Task_Weight × (10.0 / Active_Miners)`
 
-**Formula**: `Reward = Block_Budget / Active_Miners * Confidence_Multiplier`
+| Task Type | Weight | 1 Miner | 10 Miners | 100 Miners |
+|-----------|--------|---------|-----------|------------|
+| federated_learning | 1.00x | 10.00 | 1.00 | 0.10 |
+| model_training | 0.80x | 8.00 | 0.80 | 0.08 |
+| network_protection | 0.60x | 6.00 | 0.60 | 0.06 |
+| fraud_detection | 0.50x | 5.00 | 0.50 | 0.05 |
+| gradient_compute | 0.50x | 5.00 | 0.50 | 0.05 |
+| inference | 0.40x | 4.00 | 0.40 | 0.04 |
+| data_validation | 0.30x | 3.00 | 0.30 | 0.03 |
+| matrix_ops | 0.30x | 3.00 | 0.30 | 0.03 |
 
-| Task Type | Base Reward | Hardware Required |
-|-----------|-------------|-------------------|
-| `fraud_detection` | 0.50 NNET | 1+ CPU (laptops OK!) |
-| `model_training` | 0.80 NNET | 8+ CPU, 8GB GPU |
-| `network_protection` | 0.60 NNET | 4+ CPU |
-| `data_validation` | 0.30 NNET | 1+ CPU (laptops OK!) |
-| `inference` | 0.40 NNET | 1+ CPU (laptops OK!) |
-| `federated_learning` | 1.00 NNET | 8+ CPU, 16GB GPU |
-| `gradient_compute` | 0.50 NNET | 4+ CPU, 2GB GPU |
-| `matrix_ops` | 0.30 NNET | 2+ CPU |
+## Hardware Requirements
+
+| Level | Requirements | Typical Tasks |
+|-------|--------------|---------------|
+| Minimum | 1 CPU, No GPU | fraud_detection, inference, data_validation |
+| Standard | 4 CPU, 2GB GPU | model_training, gradient_compute |
+| High | 8+ CPU, 8GB+ GPU | federated_learning |
+
+Any computer can mine! The network assigns appropriate tasks.
+
+## How It Works
+
+1. **Register** - Your wallet is registered with the network
+2. **Start Session** - Begin receiving AI tasks
+3. **Process Tasks** - Your computer performs AI computations
+4. **Earn Rewards** - NNET tokens are minted to your wallet
+
+All rewards are **minted as new tokens**, balanced by transaction fee burning (EIP-1559 style).
 
 ## Progressive Decentralization
 
-As more miners join, the network transitions from Replit servers to miners:
+As more miners join, the network becomes more decentralized:
 
-| Active Miners | Replit Load | Miner Load | Phase |
-|---------------|-------------|------------|-------|
-| 0-10 | 100% | 0% | Bootstrap |
-| 10-100 | 50-100% | 0-50% | Transition |
-| 100-1000 | 10-50% | 50-90% | Distributed |
-| 1000+ | 0% | 100% | Decentralized |
+| Miners | Network State | Server Load | Miner Load |
+|--------|---------------|-------------|------------|
+| 0-10 | Bootstrap | 100% | 0% |
+| 10-100 | Transition | 50% | 50% |
+| 100-1000 | Distributed | 10% | 90% |
+| 1000+ | Decentralized | 0% | 100% |
 
-When the network reaches 1000+ miners, Replit can be shut down completely!
-
-## Sample Output
-
-```
-============================================================
-    NeoNet AI Miner - Proof of Intelligence Network
-============================================================
-Server: https://neonet.example.com
-Miner ID: miner_a1b2c3d4e5f6
-CPU Cores: 8
-GPU: RTX 4090 (8192MB)
-------------------------------------------------------------
-[GAS] Network Fee Model: EIP-1559 Dynamic
-[GAS] NNET Transfer Fee: 0.012453 NNET
-[GAS] Token Transfer Fee: 0.006227 NNET
-[GAS] Congestion Level: medium
-[GAS] Active Providers: 5
-------------------------------------------------------------
-[OK] Registered with NeoNet: {'success': True, ...}
-[OK] Session started: 550e8400-e29b-41d4-a716-446655440000
-
-[MINING] Starting AI task processing...
-[INFO] Press Ctrl+C to stop
-
-[TASK] Processing: gradient_compute (ID: 7a8b9c0d...)
-[DONE] Computed in 156ms
-[REWARD] +0.0800 NNET | Total: 0.0800 NNET
-
-[TASK] Processing: matrix_multiply (ID: 1e2f3a4b...)
-[DONE] Computed in 89ms
-[REWARD] +0.0500 NNET | Total: 0.1300 NNET
-
-[STATUS] Tasks: 2 | Rewards: 0.1300 NNET
-[GAS] Fee: 0.011892 NNET | Congestion: medium | Providers: 6
-```
-
-## Network Gas Fees
-
-The miner displays real-time network gas fee information:
-
-- **Fee Model**: EIP-1559 Dynamic - fees adjust based on network conditions
-- **NNET Transfer Fee**: Current cost to send NNET tokens
-- **Token Transfer Fee**: Current cost to send other tokens (cheaper than NNET)
-- **Congestion Level**: low/medium/high/very_high - affects fees
-- **Active Providers**: More miners = lower fees for users
-
-Your mining activity helps reduce network fees for all users!
-
-## API Endpoints Used
-
-The miner client communicates with these NeoNet endpoints:
-
-- `POST /ai-energy/register` - Register as contributor
-- `POST /ai-energy/start-session` - Start mining session
-- `GET /ai-energy/task/{contributor_id}` - Fetch task to process
-- `POST /ai-energy/submit-result` - Submit completed task
-- `POST /ai-energy/heartbeat` - Keep session alive
-- `POST /ai-energy/stop-session` - End session
-- `GET /api/gas/info` - Get current network gas fees (EIP-1559)
+Eventually, the network runs entirely on miner nodes!
 
 ## Running as a Service (Linux)
 
-Create a systemd service file `/etc/systemd/system/neonet-miner.service`:
+Create `/etc/systemd/system/neonet-miner.service`:
 
 ```ini
 [Unit]
@@ -159,7 +124,7 @@ After=network.target
 Type=simple
 User=yourusername
 WorkingDirectory=/path/to/miner-client
-ExecStart=/usr/bin/python3 neonet_miner.py --server https://neonet.example.com --cpu 8
+ExecStart=/usr/bin/python3 neonet_miner.py --wallet your_wallet --server https://neonet-ai-blockchain-neonetainetwork.replit.app
 Restart=always
 RestartSec=10
 
@@ -167,47 +132,18 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-Then enable and start:
-
+Then:
 ```bash
 sudo systemctl enable neonet-miner
 sudo systemctl start neonet-miner
 ```
 
-## Docker
+## Links
 
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY neonet_miner.py .
-CMD ["python", "neonet_miner.py", "--server", "https://neonet.example.com"]
-```
+- Website: https://neonetainetwork.com
+- Documentation: https://neonetainetwork.info
+- GitHub: https://github.com/neonetainetwork
 
-Build and run:
+## License
 
-```bash
-docker build -t neonet-miner .
-docker run -d neonet-miner
-```
-
-## Troubleshooting
-
-**Cannot connect to server:**
-- Check that the server URL is correct
-- Ensure your firewall allows outbound connections
-
-**Session keeps dropping:**
-- Unstable internet connection
-- Server may be overloaded, try again later
-
-**Low rewards:**
-- Consider using a GPU for faster processing
-- Increase CPU cores
-
-## Support
-
-- GitHub: https://github.com/Timur2000kdkmd/neonet-miner
-- Discord: https://discord.gg/neonet
-- Docs: https://docs.neonet.network
+MIT License - NeoNet AI Network 2025

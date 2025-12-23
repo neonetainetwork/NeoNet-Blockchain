@@ -113,41 +113,167 @@ Where:
 
 ## 4. Tokenomics (EIP-1559 Model)
 
-### 4.1 Supply Model
+### 4.1 Token Overview
 
 | Parameter | Value |
 |-----------|-------|
-| Genesis Supply | 50,000,000 NNET |
-| Supply Model | Dynamic (can inflate/deflate) |
-| Fee Burn Rate | 70% of transaction fees |
-| Miner Tips | 30% of transaction fees |
+| **Token Name** | NeoNet |
+| **Ticker** | NNET |
+| **Genesis Supply** | 50,000,000 NNET |
+| **Supply Model** | Dynamic (inflationary/deflationary) |
+| **Decimals** | 18 |
+| **Burn Address** | nnet1000000000000000000000000000000000dead |
 
-### 4.2 Token Flow
+### 4.2 Token Creation (Minting)
+
+New NNET tokens are **minted** (created) only through AI Energy Mining:
+
+```python
+# How minting works in NeoNet
+def issue_nnet(recipient: str, amount: float, task_type: str):
+    """
+    Creates new NNET tokens and adds them to circulation.
+    Only triggered when miners complete AI tasks.
+    """
+    # 1. Validate the completed AI task
+    if not validate_ai_task(task_id):
+        return False
+    
+    # 2. Calculate reward based on task type
+    rewards = {
+        "federated_learning": 1.00,  # Highest reward
+        "model_training": 0.80,
+        "network_protection": 0.60,
+        "fraud_detection": 0.50,
+        "gradient_compute": 0.50,
+        "inference": 0.40,
+        "data_validation": 0.30,
+        "matrix_ops": 0.30
+    }
+    
+    # 3. Mint new tokens (increase total supply)
+    blockchain.balances[recipient] += amount
+    blockchain.network_stats["total_issued"] += amount
+    blockchain.network_stats["current_supply"] += amount
+    
+    # 4. Record in transaction history
+    record_issuance(recipient, amount, task_type)
+```
+
+**Minting Rules:**
+- Only AI task completion triggers minting
+- No pre-mine (founders receive from genesis)
+- No ICO/IEO allocations
+- Annual issuance rate: ~2% (controlled by network activity)
+
+### 4.3 Token Destruction (Burning)
+
+NNET tokens are **burned** (permanently destroyed) through transaction fees:
+
+```python
+# How burning works in NeoNet (EIP-1559 style)
+def process_transaction_fee(tx_fee: float):
+    """
+    Burns 70% of transaction fees, tips 30% to validators.
+    """
+    BURN_RATE = 0.70  # 70% burned
+    TIP_RATE = 0.30   # 30% to validators
+    
+    burn_amount = tx_fee * BURN_RATE
+    tip_amount = tx_fee * TIP_RATE
+    
+    # Burn tokens (send to dead address, reduce supply)
+    blockchain.balances[BURN_ADDRESS] += burn_amount
+    blockchain.network_stats["total_burned"] += burn_amount
+    blockchain.network_stats["current_supply"] -= burn_amount
+    
+    # Tip goes to block validator
+    blockchain.balances[validator] += tip_amount
+```
+
+**Burning Events:**
+| Event | Burn Rate | Description |
+|-------|-----------|-------------|
+| Transaction Fee | 70% | Base fee burned, tips to validator |
+| Contract Deployment | 100% | Full deployment fee burned |
+| Failed Transaction | 50% | Partial burn for spam prevention |
+| Governance Vote | 0% | No burn for voting |
+
+### 4.4 Supply Formula
 
 ```
-Transaction Fees:
-  ├── 70% → Burned (reduces supply)
-  └── 30% → Energy Providers (tips)
+Current_Supply = Genesis_Supply + Total_Issued - Total_Burned
 
-AI Mining Rewards:
-  └── Minted as new NNET tokens
+Where:
+- Genesis_Supply = 50,000,000 NNET (fixed)
+- Total_Issued = Sum of all mining rewards (increases)
+- Total_Burned = Sum of all burned fees (increases)
+
+Net_Change = Total_Issued - Total_Burned
+
+If Net_Change > 0: Inflationary (supply grows)
+If Net_Change < 0: Deflationary (supply shrinks)
+If Net_Change = 0: Stable supply
 ```
 
-### 4.3 Deflationary Pressure
+### 4.5 Real-Time Tokenomics API
 
-When `burn_rate > issuance_rate`, supply decreases:
+```bash
+# Get current tokenomics state
+curl https://api.neonet.network/api/tokenomics
+
+# Response:
+{
+    "genesis_supply": 50000000.0,
+    "current_supply": 50003192.47,
+    "total_issued": 3192.47,
+    "total_burned": 0.0,
+    "net_supply_change": 3192.47,
+    "is_deflationary": false,
+    "base_fee_burn_rate": 0.7,
+    "priority_fee_rate": 0.3
+}
+```
+
+### 4.6 Genesis Distribution
+
+| Allocation | Amount | Percentage | Vesting |
+|------------|--------|------------|---------|
+| Network Rewards | 35,000,000 NNET | 70% | Minted over time |
+| Development Fund | 7,500,000 NNET | 15% | 2 year linear |
+| Team & Advisors | 5,000,000 NNET | 10% | 1 year cliff + 2 year linear |
+| Community Airdrops | 2,500,000 NNET | 5% | Immediate |
+
+### 4.7 Deflationary Mechanics
+
+As network usage grows, burning accelerates:
 
 ```
-Net Supply Change = Mining_Rewards - Fee_Burns
+Scenario 1: Early Network (Low Usage)
+  Mining Rewards: 1000 NNET/day
+  Fee Burns: 100 NNET/day
+  Net: +900 NNET/day (inflationary - incentivizes miners)
 
-If Network Usage > Mining Activity:
-  → Deflationary (supply decreases)
-  → NNET value increases
+Scenario 2: Growing Network (Medium Usage)
+  Mining Rewards: 1000 NNET/day
+  Fee Burns: 1000 NNET/day
+  Net: 0 NNET/day (stable supply)
 
-If Mining Activity > Network Usage:
-  → Inflationary (supply increases)
-  → More decentralization
+Scenario 3: Mature Network (High Usage)
+  Mining Rewards: 1000 NNET/day
+  Fee Burns: 2000 NNET/day
+  Net: -1000 NNET/day (deflationary - value increases)
 ```
+
+### 4.8 Token Utility
+
+| Use Case | Description |
+|----------|-------------|
+| **Gas Fees** | Pay for transactions and contract execution |
+| **Staking** | Stake to become validator, earn rewards |
+| **Governance** | Vote on proposals (1 NNET = 1 vote) |
+| **AI Services** | Pay for AI inference, model training |
+| **Mining Rewards** | Earn for providing compute power |
 
 ---
 

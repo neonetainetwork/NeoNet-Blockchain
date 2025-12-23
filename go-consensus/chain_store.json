@@ -1,0 +1,27 @@
+{
+  "blocks": [
+    {
+      "Index": 0,
+      "Timestamp": 1733299200,
+      "Data": "Genesis Block - NeoNet AI-Powered Web4 Blockchain",
+      "PrevHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "Hash": "genesis_block_neonet_ai_web4_blockchain_2024",
+      "Validator": "genesis",
+      "Votes": 0,
+      "AIScore": 1.0,
+      "Signature": "",
+      "Transactions": []
+    }
+  ],
+  "validators": [
+    {
+      "Address": "neo1genesis00000000000000000000000000",
+      "Stake": 50000,
+      "Active": true,
+      "BlocksMined": 1
+    }
+  ],
+  "height": 1,
+  "chainId": "neonet-mainnet-1",
+  "version": "1.0.0"
+}

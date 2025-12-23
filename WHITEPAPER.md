@@ -122,7 +122,7 @@ Where:
 | **Genesis Supply** | 50,000,000 NNET |
 | **Supply Model** | Dynamic (inflationary/deflationary) |
 | **Decimals** | 18 |
-| **Burn Address** | nnet1000000000000000000000000000000000dead |
+| **Burn Address** | neo1000000000000000000000000000000000dead |
 
 ### 4.2 Token Creation (Minting)
 

@@ -842,7 +842,8 @@ async def pqc_status():
 @app.get("/api/network/status")
 async def network_status():
     """Get comprehensive network status"""
-    active_miners = len([c for c in contributors_storage.values() if c.get("active_sessions", 0) > 0])
+    active_providers = len([s for s in ai_energy_sessions.values() 
+                           if int(time.time()) - s.get("last_heartbeat", 0) < 60])
     reward_info = get_current_reward_rate()
     
     return {
@@ -852,19 +853,31 @@ async def network_status():
         "version": "1.0.0",
         "block_height": blockchain.block_height if BLOCKCHAIN_ENABLED and blockchain else 1,
         "total_accounts": len(blockchain.balances) if BLOCKCHAIN_ENABLED and blockchain else 0,
-        "active_miners": active_miners,
+        "active_energy_providers": active_providers,
         "ai_engine_enabled": AI_ENGINE_ENABLED,
         "pqc_enabled": True,
         "dynamic_rewards": reward_info,
         "security_layers": 8,
         "consensus": "Proof of Intelligence (PoI)",
+        "network_speed": {
+            "tps": 3000,
+            "block_time_seconds": 3,
+            "finality": "instant"
+        },
+        "energy_model": {
+            "description": "Providers DON'T compute - AI does all work",
+            "reward_formula": "Block_Budget / Active_Providers",
+            "block_budget": BLOCK_BUDGET
+        },
         "features": [
             "AI-Powered Consensus",
             "Dynamic Rewards",
             "Post-Quantum Cryptography",
             "EVM + WASM Dual Runtime",
             "8 Security Layers",
-            "EIP-1559 Gas Model"
+            "EIP-1559 Gas Model",
+            "3000 TPS",
+            "Energy Provider Model"
         ],
         "timestamp": int(time.time())
     }
@@ -1591,7 +1604,7 @@ async def network_overview():
         "total_contracts": total_contracts,
         "ai_engine_enabled": AI_ENGINE_ENABLED,
         "total_transactions": consensus_stats.get("total_transactions", len(blockchain.balances) if BLOCKCHAIN_ENABLED and blockchain else 0),
-        "avg_block_time": consensus_stats.get("avg_block_time", 12.5),
+        "avg_block_time": consensus_stats.get("avg_block_time", 3.0),
         "timestamp": int(time.time())
     }
 
@@ -1634,7 +1647,7 @@ async def network_stats():
         "active_validators": consensus_stats.get("active_validators", 1),
         "connected_peers": consensus_stats.get("connected_peers", 0),
         "pending_transactions": consensus_stats.get("pending_transactions", 0),
-        "avg_block_time": consensus_stats.get("avg_block_time", 12.5),
+        "avg_block_time": consensus_stats.get("avg_block_time", 3.0),
         "network_hashrate": consensus_stats.get("network_hashrate", "1.2 TH/s"),
         "active_miners": len(miners_storage),
         "queued_tasks": len([t for t in tasks_storage.values() if t.get("state") == "queued"]),
@@ -3387,35 +3400,40 @@ TASK_WEIGHTS = {
     "network_protection": 0.60,
     "data_validation": 0.30,
     "inference": 0.40,
-    "federated_learning": 1.00,  # Hardest task = highest weight
+    "federated_learning": 1.00,
     "gradient_compute": 0.50,
-    "matrix_ops": 0.30
+    "matrix_ops": 0.30,
+    "energy_provision": 1.00  # Just being online = full reward
 }
 
-def calculate_dynamic_reward(task_type: str) -> float:
+def calculate_dynamic_reward(task_type: str, active_providers: int = None) -> float:
     """
     Dynamic Reward Calculation (Protocol NeoNet Genesis)
     
-    Formula: Reward = Task_Weight * (Block_Budget / Active_Miners)
+    Energy Providers DON'T compute - AI does all the work.
+    You just stay online and earn rewards.
+    
+    Formula: Reward = Task_Weight * (Block_Budget / Active_Providers)
     
     Examples:
-    - 1 miner:   1.0 * (10.0 / 1) = 10.0 NNET (capped at MAX)
-    - 10 miners: 1.0 * (10.0 / 10) = 1.0 NNET
-    - 100 miners: 1.0 * (10.0 / 100) = 0.1 NNET
-    - 1000 miners: 1.0 * (10.0 / 1000) = 0.01 NNET
+    - 1 provider:   1.0 * (10.0 / 1) = 10.0 NNET (capped at MAX)
+    - 10 providers: 1.0 * (10.0 / 10) = 1.0 NNET
+    - 100 providers: 1.0 * (10.0 / 100) = 0.1 NNET
+    - 1000 providers: 1.0 * (10.0 / 1000) = 0.01 NNET
     
-    This ensures network doesn't hyperinflate with many miners,
+    This ensures network doesn't hyperinflate,
     but early adopters get higher rewards.
     """
-    active_miners = len([c for c in ai_energy_contributors.values() if c.get("is_active", False)])
-    active_miners = max(1, active_miners)  # Prevent division by zero
+    if active_providers is None:
+        active_providers = len([c for c in ai_energy_contributors.values() if c.get("is_active", False)])
+    active_providers = max(1, active_providers)
     
-    base_reward_per_miner = BLOCK_BUDGET / active_miners
-    base_reward_per_miner = max(MIN_REWARD_PER_MINER, min(MAX_REWARD_PER_MINER, base_reward_per_miner))
+    base_reward = BLOCK_BUDGET / active_providers
+    base_reward = max(MIN_REWARD_PER_MINER, min(MAX_REWARD_PER_MINER, base_reward))
     
-    task_weight = TASK_WEIGHTS.get(task_type, 0.5)
+    task_weight = TASK_WEIGHTS.get(task_type, 1.0)  # Default to full reward for energy
     
-    dynamic_reward = base_reward_per_miner * task_weight
+    dynamic_reward = base_reward * task_weight
     
     return round(dynamic_reward, 6)
 
@@ -3784,7 +3802,14 @@ async def ai_energy_submit_result(req: AITaskResult):
 
 @app.post("/ai-energy/heartbeat")
 async def ai_energy_heartbeat(req: AIEnergyHeartbeat):
-    """Send heartbeat to keep session alive and report progress"""
+    """
+    Send heartbeat to stay connected and earn rewards.
+    
+    Energy Providers DON'T compute anything - AI does all the work.
+    You get rewarded just for being online and providing "energy".
+    
+    Reward = Block_Budget / Active_Providers (per block, ~3 seconds)
+    """
     contributor_id = req.contributor_id.lower()
     session_id = req.session_id
     
@@ -3801,41 +3826,36 @@ async def ai_energy_heartbeat(req: AIEnergyHeartbeat):
     session["last_heartbeat"] = now
     session["compute_seconds"] += elapsed
     
-    # Update average usage
-    session["cpu_usage_avg"] = (session["cpu_usage_avg"] + req.cpu_usage) / 2
-    session["gpu_usage_avg"] = (session["gpu_usage_avg"] + req.gpu_usage) / 2
+    active_providers = max(1, len([s for s in ai_energy_sessions.values() 
+                                    if now - s.get("last_heartbeat", 0) < 60]))
     
-    # Process completed tasks
-    tasks_completed = req.tasks_completed
-    if tasks_completed > session["tasks_completed"]:
-        new_completions = tasks_completed - session["tasks_completed"]
-        session["tasks_completed"] = tasks_completed
-        
-        # Calculate rewards
-        reward = new_completions * random.uniform(0.01, 0.1)
-        session["rewards_earned"] += reward
-        
-        # Add to contributor and blockchain balance
-        if contributor_id in ai_energy_contributors:
-            ai_energy_contributors[contributor_id]["total_rewards"] += reward
-            ai_energy_contributors[contributor_id]["total_tasks"] += new_completions
-            
-            if BLOCKCHAIN_ENABLED and blockchain:
-                blockchain.balances[contributor_id] = blockchain.balances.get(contributor_id, 0.0) + reward
-        
-        ai_energy_stats["total_tasks_completed"] += new_completions
-        ai_energy_stats["total_rewards_distributed"] += reward
+    reward = calculate_dynamic_reward("energy_provision", active_providers)
     
-    # Get next task
-    next_task = _create_ai_energy_task(session_id)
+    session["tasks_completed"] += 1
+    session["rewards_earned"] += reward
+    
+    if contributor_id in ai_energy_contributors:
+        ai_energy_contributors[contributor_id]["total_rewards"] += reward
+        ai_energy_contributors[contributor_id]["total_tasks"] += 1
+        
+        if BLOCKCHAIN_ENABLED and blockchain:
+            blockchain.balances[contributor_id] = blockchain.balances.get(contributor_id, 0.0) + reward
+            blockchain.network_stats["total_issued"] += reward
+            blockchain.network_stats["current_supply"] = blockchain.GENESIS_SUPPLY + blockchain.network_stats["total_issued"] - blockchain.network_stats["total_burned"]
+    
+    ai_energy_stats["total_tasks_completed"] += 1
+    ai_energy_stats["total_rewards_distributed"] += reward
     
     return {
         "success": True,
         "session_id": session_id,
+        "reward": reward,
+        "reward_per_block": BLOCK_BUDGET / active_providers,
+        "active_providers": active_providers,
         "compute_time": session["compute_seconds"],
-        "tasks_completed": session["tasks_completed"],
-        "rewards_earned": session["rewards_earned"],
-        "next_task": next_task,
+        "blocks_contributed": session["tasks_completed"],
+        "total_rewards": session["rewards_earned"],
+        "ai_status": "AI is handling all computation - you just provide energy",
         "status": "active"
     }
 

@@ -6,8 +6,20 @@ import WalletModal from './components/WalletModal';
 import './mobile.css';
 
 const API = '/api';
+const NNET_LOGO = '/uploads/nnet_logo.png';
 
-function ExploreTab() {
+function NnetLogo({ size = 24, style = {} }) {
+  return (
+    <img 
+      src={NNET_LOGO} 
+      alt="NNET" 
+      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', ...style }} 
+      onError={(e) => { e.target.style.display = 'none'; }}
+    />
+  );
+}
+
+function ExploreTab({ wallet }) {
   const [exploreData, setExploreData] = useState({
     tokens: [],
     dapps: [],
@@ -138,6 +150,16 @@ function ExploreTab() {
         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px'}}>
           {filteredItems().map((item, index) => (
             <div key={index} style={{...styles.card, cursor: 'pointer', transition: 'transform 0.2s', ':hover': {transform: 'scale(1.02)'}}}>
+              {item.image_url && (
+                <div style={{marginBottom: '15px', textAlign: 'center'}}>
+                  <img 
+                    src={item.image_url} 
+                    alt={item.name} 
+                    style={{width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '8px'}} 
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+              )}
               <div style={{display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px'}}>
                 <div style={{fontSize: '40px'}}>{getCategoryIcon(item)}</div>
                 <div style={{flex: 1}}>
@@ -155,6 +177,11 @@ function ExploreTab() {
                   {item.category && (
                     <span style={{marginLeft: '5px', fontSize: '12px', color: '#888'}}>
                       ({item.category})
+                    </span>
+                  )}
+                  {item.ai_verified && (
+                    <span style={{marginLeft: '5px', fontSize: '11px', color: '#4CAF50'}}>
+                      ✓ Verified
                     </span>
                   )}
                 </div>
@@ -181,6 +208,22 @@ function ExploreTab() {
                 )}
                 {item.floor_price_neo !== undefined && (
                   <div><span style={{color: '#888'}}>Floor:</span> <strong>{item.floor_price_neo} NNET</strong></div>
+                )}
+                {item.remaining !== undefined && item.itemType === 'nft' && (
+                  <div><span style={{color: '#888'}}>Available:</span> <strong style={{color: item.remaining <= 5 ? '#f44336' : '#4CAF50'}}>{item.remaining}/{item.total_supply}</strong></div>
+                )}
+                {item.creator && item.itemType === 'nft' && (
+                  <div style={{gridColumn: '1 / -1'}}>
+                    <span style={{color: '#888'}}>Creator:</span>{' '}
+                    <strong 
+                      style={{color: '#58a6ff', cursor: 'pointer', fontSize: '12px'}} 
+                      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.creator); alert('Creator address copied!\n\n' + item.creator); }}
+                      title={item.creator}
+                    >
+                      {item.creator?.slice(0, 12)}...{item.creator?.slice(-8)}
+                    </strong>
+                    {item.ai_verified && <span style={{marginLeft: '6px', color: '#4CAF50', fontSize: '11px'}}>✓ AI Verified</span>}
+                  </div>
                 )}
                 {item.users_count !== undefined && (
                   <div><span style={{color: '#888'}}>Users:</span> <strong>{item.users_count}</strong></div>
@@ -232,19 +275,508 @@ function ExploreTab() {
                   {item.itemType === 'nft' && (
                     <>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); alert(`NFT Marketplace coming soon!\n\nCollection: ${item.name}\nSymbol: ${item.symbol}\nTotal Supply: ${item.total_supply}\nFloor Price: ${item.floor_price_neo || 0} NNET`); }}
+                        onClick={async (e) => { 
+                          e.stopPropagation(); 
+                          const walletAddress = wallet?.addresses?.neoAddress || wallet?.quantumAddress;
+                          if (!wallet || !wallet.isConnected || !walletAddress) {
+                            alert('Please connect wallet first');
+                            return;
+                          }
+                          const remaining = item.remaining !== undefined ? item.remaining : (item.total_supply - (item.minted || 0));
+                          if (remaining <= 0) {
+                            alert('This collection is SOLD OUT!');
+                            return;
+                          }
+                          if (confirm(`Buy NFT from "${item.name}" for ${item.floor_price_neo || 0} NNET?\n\nAvailable: ${remaining}/${item.total_supply}\nYour wallet: ${walletAddress?.slice(0,20)}...`)) {
+                            try {
+                              const res = await axios.post(`${API}/nft/${item.symbol}/buy`, { buyer: walletAddress });
+                              const status = res.data.collection_status;
+                              alert(`Success! You purchased ${res.data.nft?.name}\n\nNFT Hash: ${res.data.nft?.nft_hash?.slice(0,16)}...\n${status?.is_sold_out ? '🔥 SOLD OUT!' : `Remaining: ${status?.remaining}/${status?.total_supply}`}`);
+                              loadExploreData();
+                            } catch (err) {
+                              alert('Purchase failed: ' + (err.response?.data?.detail || err.message));
+                            }
+                          }
+                        }}
                         style={{...styles.button, padding: '6px 12px', fontSize: '12px', background: '#f7931a'}}
                       >
-                        🛒 Buy NFT
+                        🛒 Buy ({item.floor_price_neo || 0} NNET)
                       </button>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); alert(`NFT Collection:\n\nName: ${item.name}\nSymbol: ${item.symbol}\nTotal Items: ${item.total_supply}\nMinted: ${item.minted || 0}\nFloor Price: ${item.floor_price_neo || 0} NNET\nCategory: ${item.category}`); }}
+                        onClick={(e) => { e.stopPropagation(); alert(`NFT Collection:\n\nName: ${item.name}\nSymbol: ${item.symbol}\nAvailable: ${item.remaining !== undefined ? item.remaining : '?'}/${item.total_supply}\nMinted: ${item.minted || 0}\nFloor Price: ${item.floor_price_neo || 0} NNET\nCategory: ${item.category}\n\n👤 CREATOR WALLET:\n${item.creator || 'Unknown'}\n\n🔐 VERIFICATION:\nAI Verified: ${item.ai_verified ? '✓ Yes' : '✗ No'}\nOrigin Hash: ${item.origin_hash || 'N/A'}\nContract: ${item.contract_address}`); }}
                         style={{...styles.button, padding: '6px 12px', fontSize: '12px', background: '#2196F3'}}
                       >
-                        👁️ View Collection
+                        👁️ View
                       </button>
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TokenFactoryForm({ wallet }) {
+  const [tokenData, setTokenData] = useState({
+    name: '',
+    symbol: '',
+    totalSupply: '1000000',
+    decimals: '18',
+    description: '',
+    imageUrl: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post(`${API}/upload/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setTokenData({...tokenData, imageUrl: res.data.url});
+    } catch (e) {
+      alert('Upload failed: ' + (e.response?.data?.detail || e.message));
+    }
+    setUploading(false);
+  };
+
+  const createToken = async () => {
+    if (!tokenData.name || !tokenData.symbol || !tokenData.totalSupply) {
+      return alert('Please fill in name, symbol and total supply');
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/tokens/create`, {
+        name: tokenData.name,
+        symbol: tokenData.symbol.toUpperCase(),
+        total_supply: parseFloat(tokenData.totalSupply),
+        creator: wallet.evmAddress,
+        decimals: parseInt(tokenData.decimals),
+        description: tokenData.description,
+        image_url: tokenData.imageUrl
+      });
+      setResult(res.data);
+      alert(`Token ${tokenData.symbol} created successfully! It will appear in your wallet and DEX.`);
+    } catch (e) {
+      alert('Error: ' + (e.response?.data?.detail || e.message));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+        <div style={styles.formGroup}>
+          <label>Token Name *</label>
+          <input 
+            placeholder="My Awesome Token" 
+            value={tokenData.name}
+            onChange={e => setTokenData({...tokenData, name: e.target.value})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Symbol * (3-5 chars)</label>
+          <input 
+            placeholder="MAT" 
+            maxLength={5}
+            value={tokenData.symbol}
+            onChange={e => setTokenData({...tokenData, symbol: e.target.value.toUpperCase()})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Total Supply *</label>
+          <input 
+            type="number"
+            placeholder="1000000" 
+            value={tokenData.totalSupply}
+            onChange={e => setTokenData({...tokenData, totalSupply: e.target.value})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Decimals</label>
+          <select 
+            value={tokenData.decimals}
+            onChange={e => setTokenData({...tokenData, decimals: e.target.value})}
+            style={styles.input}
+          >
+            <option value="18">18 (Standard)</option>
+            <option value="8">8 (Bitcoin-style)</option>
+            <option value="6">6 (USDC-style)</option>
+            <option value="0">0 (No decimals)</option>
+          </select>
+        </div>
+      </div>
+      <div style={styles.formGroup}>
+        <label>Token Logo</label>
+        <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+          <label style={{...styles.btn, background: '#333', cursor: 'pointer', display: 'inline-block'}}>
+            {uploading ? 'Uploading...' : 'Upload Image'}
+            <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} disabled={uploading} />
+          </label>
+          <span style={{color: '#888'}}>or</span>
+          <input 
+            placeholder="Paste URL" 
+            value={tokenData.imageUrl}
+            onChange={e => setTokenData({...tokenData, imageUrl: e.target.value})}
+            style={{...styles.input, flex: 1}}
+          />
+        </div>
+        {tokenData.imageUrl && (
+          <div style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+            <img src={tokenData.imageUrl} alt="Token logo" style={{width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover'}} onError={e => e.target.style.display='none'} />
+            <button onClick={() => setTokenData({...tokenData, imageUrl: ''})} style={{...styles.btn, background: '#f44336', padding: '5px 10px'}}>Remove</button>
+          </div>
+        )}
+      </div>
+      <div style={styles.formGroup}>
+        <label>Description (optional)</label>
+        <textarea 
+          placeholder="Describe your token..." 
+          value={tokenData.description}
+          onChange={e => setTokenData({...tokenData, description: e.target.value})}
+          style={{...styles.input, minHeight: '60px'}}
+        />
+      </div>
+      <button onClick={createToken} disabled={loading} style={{...styles.btn, background: '#f7931a', width: '100%'}}>
+        {loading ? 'Creating Token...' : 'Create Token'}
+      </button>
+      {result && (
+        <div style={{marginTop: '15px', padding: '15px', background: '#1a1a2e', borderRadius: '8px', border: '1px solid #4CAF50'}}>
+          <p style={{color: '#4CAF50', fontWeight: 'bold'}}>Token Created Successfully!</p>
+          <p><strong>Symbol:</strong> {result.symbol}</p>
+          <p><strong>Contract:</strong> {result.contract_address}</p>
+          <p style={{fontSize: '12px', color: '#888'}}>Your token is now available in DEX and your wallet!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NFTFactoryForm({ wallet }) {
+  const [nftData, setNftData] = useState({
+    name: '',
+    symbol: '',
+    totalSupply: '100',
+    category: 'art',
+    floorPrice: '0.1',
+    description: '',
+    imageUrl: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post(`${API}/upload/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setNftData({...nftData, imageUrl: res.data.url});
+    } catch (e) {
+      alert('Upload failed: ' + (e.response?.data?.detail || e.message));
+    }
+    setUploading(false);
+  };
+
+  const createNFT = async () => {
+    if (!nftData.name || !nftData.symbol || !nftData.totalSupply) {
+      return alert('Please fill in name, symbol and total supply');
+    }
+    
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/nft/create`, {
+        name: nftData.name,
+        symbol: nftData.symbol.toUpperCase(),
+        total_supply: parseInt(nftData.totalSupply),
+        creator: wallet.evmAddress,
+        category: nftData.category,
+        floor_price: parseFloat(nftData.floorPrice),
+        description: nftData.description,
+        image_url: nftData.imageUrl
+      });
+      setResult(res.data);
+      alert(`NFT Collection ${nftData.name} created successfully!`);
+    } catch (e) {
+      alert('Error: ' + (e.response?.data?.detail || e.message));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+        <div style={styles.formGroup}>
+          <label>Collection Name *</label>
+          <input 
+            placeholder="Cool NFT Collection" 
+            value={nftData.name}
+            onChange={e => setNftData({...nftData, name: e.target.value})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Symbol * (3-5 chars)</label>
+          <input 
+            placeholder="COOL" 
+            maxLength={5}
+            value={nftData.symbol}
+            onChange={e => setNftData({...nftData, symbol: e.target.value.toUpperCase()})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Total Supply (max items)</label>
+          <input 
+            type="number"
+            placeholder="100" 
+            value={nftData.totalSupply}
+            onChange={e => setNftData({...nftData, totalSupply: e.target.value})}
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Category</label>
+          <select 
+            value={nftData.category}
+            onChange={e => setNftData({...nftData, category: e.target.value})}
+            style={styles.input}
+          >
+            <option value="art">Art</option>
+            <option value="gaming">Gaming</option>
+            <option value="music">Music</option>
+            <option value="collectibles">Collectibles</option>
+            <option value="photography">Photography</option>
+          </select>
+        </div>
+        <div style={styles.formGroup}>
+          <label>Floor Price (NNET)</label>
+          <input 
+            type="number"
+            step="0.01"
+            placeholder="0.1" 
+            value={nftData.floorPrice}
+            onChange={e => setNftData({...nftData, floorPrice: e.target.value})}
+            style={styles.input}
+          />
+        </div>
+      </div>
+      <div style={styles.formGroup}>
+        <label>Collection Image</label>
+        <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+          <label style={{...styles.btn, background: '#333', cursor: 'pointer', display: 'inline-block'}}>
+            {uploading ? 'Uploading...' : 'Upload Image'}
+            <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} disabled={uploading} />
+          </label>
+          <span style={{color: '#888'}}>or</span>
+          <input 
+            placeholder="Paste URL" 
+            value={nftData.imageUrl}
+            onChange={e => setNftData({...nftData, imageUrl: e.target.value})}
+            style={{...styles.input, flex: 1}}
+          />
+        </div>
+        {nftData.imageUrl && (
+          <div style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+            <img src={nftData.imageUrl} alt="NFT preview" style={{width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover'}} onError={e => e.target.style.display='none'} />
+            <button onClick={() => setNftData({...nftData, imageUrl: ''})} style={{...styles.btn, background: '#f44336', padding: '5px 10px'}}>Remove</button>
+          </div>
+        )}
+      </div>
+      <div style={styles.formGroup}>
+        <label>Description</label>
+        <textarea 
+          placeholder="Describe your NFT collection..." 
+          value={nftData.description}
+          onChange={e => setNftData({...nftData, description: e.target.value})}
+          style={{...styles.input, minHeight: '60px'}}
+        />
+      </div>
+      <button onClick={createNFT} disabled={loading} style={{...styles.btn, background: '#9c27b0', width: '100%'}}>
+        {loading ? 'Creating Collection...' : 'Create NFT Collection'}
+      </button>
+      {result && (
+        <div style={{marginTop: '15px', padding: '15px', background: '#1a1a2e', borderRadius: '8px', border: '1px solid #9c27b0'}}>
+          <p style={{color: '#9c27b0', fontWeight: 'bold'}}>NFT Collection Created!</p>
+          <p><strong>Name:</strong> {result.collection?.name}</p>
+          <p><strong>Contract:</strong> {result.collection?.contract_address}</p>
+          <p style={{fontSize: '12px', color: '#888'}}>Your collection is now available in Explore!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WalletNFTSection({ wallet }) {
+  const [nfts, setNfts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [listingPrice, setListingPrice] = useState('');
+  const [selectedNft, setSelectedNft] = useState(null);
+
+  const walletAddress = wallet?.addresses?.neoAddress || wallet?.quantumAddress;
+
+  useEffect(() => {
+    if (walletAddress) {
+      loadNFTs();
+    }
+  }, [walletAddress]);
+
+  const loadNFTs = async () => {
+    if (!walletAddress) return;
+    try {
+      const res = await axios.get(`${API}/wallet/${walletAddress}/nfts`);
+      setNfts(res.data?.nfts || []);
+    } catch (e) {
+      console.error('Failed to load NFTs:', e);
+    }
+    setLoading(false);
+  };
+
+  const listForSale = async (nft) => {
+    if (!listingPrice || parseFloat(listingPrice) <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    try {
+      const res = await axios.post(`${API}/nft/list`, {
+        collection_symbol: nft.collection_symbol,
+        token_id: nft.token_id,
+        price: parseFloat(listingPrice),
+        seller: walletAddress
+      });
+      alert(`NFT listed for sale at ${listingPrice} NNET!`);
+      setSelectedNft(null);
+      setListingPrice('');
+      loadNFTs();
+    } catch (e) {
+      alert('Failed to list: ' + (e.response?.data?.detail || e.message));
+    }
+  };
+
+  const cancelListing = async (nft) => {
+    try {
+      await axios.post(`${API}/nft/unlist`, {
+        collection_symbol: nft.collection_symbol,
+        token_id: nft.token_id,
+        seller: walletAddress
+      });
+      alert('Listing cancelled');
+      loadNFTs();
+    } catch (e) {
+      alert('Failed: ' + (e.response?.data?.detail || e.message));
+    }
+  };
+
+  if (!walletAddress || !wallet?.isConnected) return null;
+
+  return (
+    <div style={styles.card}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+        <div style={styles.cardLabel}>🎨 My NFTs ({nfts.length})</div>
+        <button onClick={loadNFTs} style={{...styles.btn, padding: '5px 10px', fontSize: '12px', background: '#333'}}>
+          🔄 Refresh
+        </button>
+      </div>
+      
+      {loading ? (
+        <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>Loading NFTs...</div>
+      ) : nfts.length === 0 ? (
+        <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>
+          <p>No NFTs yet</p>
+          <p style={{fontSize: '12px'}}>Buy NFTs from Explore tab or create your own collection</p>
+        </div>
+      ) : (
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px'}}>
+          {nfts.map((nft, i) => (
+            <div key={i} style={{background: '#0d1117', borderRadius: '12px', overflow: 'hidden', border: nft.is_listed ? '2px solid #f7931a' : '1px solid #30363d'}}>
+              {(nft.image_url || nft.collection_image) && (
+                <img 
+                  src={nft.image_url || nft.collection_image} 
+                  alt={nft.name} 
+                  style={{width: '100%', height: '120px', objectFit: 'cover'}}
+                  onError={e => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%239c27b0" width="100" height="100"/><text x="50" y="55" font-size="40" text-anchor="middle" fill="white">NFT</text></svg>'}
+                />
+              )}
+              <div style={{padding: '10px'}}>
+                <div style={{fontWeight: 'bold', fontSize: '13px', marginBottom: '4px'}}>{nft.name}</div>
+                <div style={{fontSize: '11px', color: '#888'}}>{nft.collection_name}</div>
+                {nft.verified && (
+                  <div style={{fontSize: '10px', color: '#4CAF50', marginTop: '4px'}}>✓ Verified</div>
+                )}
+                {nft.price_paid && (
+                  <div style={{fontSize: '10px', color: '#8b949e', marginTop: '2px'}}>Paid: {nft.price_paid} NNET</div>
+                )}
+                {nft.is_listed && (
+                  <div style={{fontSize: '11px', color: '#f7931a', marginTop: '4px', fontWeight: 'bold'}}>📢 Listed: {nft.listing_price} NNET</div>
+                )}
+                
+                <div style={{marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
+                  {nft.is_listed ? (
+                    <button 
+                      onClick={() => cancelListing(nft)}
+                      style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#f44336', flex: 1}}
+                    >
+                      Cancel Listing
+                    </button>
+                  ) : selectedNft?.token_id === nft.token_id && selectedNft?.collection_symbol === nft.collection_symbol ? (
+                    <div style={{width: '100%'}}>
+                      <input 
+                        type="number" 
+                        placeholder="Price in NNET" 
+                        value={listingPrice}
+                        onChange={e => setListingPrice(e.target.value)}
+                        style={{...styles.input, padding: '6px', fontSize: '11px', marginBottom: '4px'}}
+                      />
+                      <div style={{display: 'flex', gap: '4px'}}>
+                        <button 
+                          onClick={() => listForSale(nft)}
+                          style={{...styles.btn, padding: '4px 6px', fontSize: '10px', background: '#4CAF50', flex: 1}}
+                        >
+                          Confirm
+                        </button>
+                        <button 
+                          onClick={() => { setSelectedNft(null); setListingPrice(''); }}
+                          style={{...styles.btn, padding: '4px 6px', fontSize: '10px', background: '#666', flex: 1}}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setSelectedNft(nft)}
+                      style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#f7931a', flex: 1}}
+                    >
+                      🏷️ Sell
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => alert(`NFT Details:\n\nName: ${nft.name}\nCollection: ${nft.collection_name}\nToken ID: ${nft.token_id}\nHash: ${nft.nft_hash}\nMinted: ${new Date(nft.minted_at * 1000).toLocaleDateString()}`)}
+                    style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#2196F3', flex: 1}}
+                  >
+                    ℹ️ Info
+                  </button>
                 </div>
               </div>
             </div>
@@ -272,8 +804,28 @@ function DeveloperTab({ wallet, setShowWallet }) {
     description: '',
     category: 'utility',
     isDapp: false,
-    websiteUrl: ''
+    websiteUrl: '',
+    logoUrl: ''
   });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await axios.post(`${API}/upload/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setContractMetadata({...contractMetadata, logoUrl: res.data.url});
+    } catch (e) {
+      alert('Upload failed: ' + (e.response?.data?.detail || e.message));
+    }
+    setUploadingLogo(false);
+  };
 
   useEffect(() => {
     loadContracts();
@@ -399,6 +951,40 @@ function DeveloperTab({ wallet, setShowWallet }) {
           </div>
         </div>
       )}
+
+      {/* Quick Token/NFT Factory */}
+      <div style={{...styles.card, background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)', border: '1px solid #f7931a', marginBottom: '20px'}}>
+        <h3 style={{color: '#f7931a', marginBottom: '15px'}}>Quick Token & NFT Factory (No Code Required)</h3>
+        <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+          <button 
+            onClick={() => setShowExamples('token_factory')} 
+            style={showExamples === 'token_factory' ? {...styles.tabActive, background: '#f7931a'} : styles.tab}
+          >
+            Create Token
+          </button>
+          <button 
+            onClick={() => setShowExamples('nft_factory')} 
+            style={showExamples === 'nft_factory' ? {...styles.tabActive, background: '#9c27b0'} : styles.tab}
+          >
+            Create NFT Collection
+          </button>
+        </div>
+        
+        {showExamples === 'token_factory' && wallet.isConnected && (
+          <TokenFactoryForm wallet={wallet} />
+        )}
+        
+        {showExamples === 'nft_factory' && wallet.isConnected && (
+          <NFTFactoryForm wallet={wallet} />
+        )}
+        
+        {(showExamples === 'token_factory' || showExamples === 'nft_factory') && !wallet.isConnected && (
+          <div style={{textAlign: 'center', padding: '20px'}}>
+            <p style={{color: '#888'}}>Connect wallet to create tokens and NFTs</p>
+            <button onClick={() => setShowWallet(true)} style={styles.btn}>Connect Wallet</button>
+          </div>
+        )}
+      </div>
 
       {/* Examples Tabs */}
       <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
@@ -703,6 +1289,28 @@ contract HybridAiVoting {
                   style={{...styles.input, minHeight: '60px'}}
                 />
               </div>
+              <div style={styles.formGroup}>
+                <label>Project Logo</label>
+                <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                  <label style={{...styles.btn, background: '#333', cursor: 'pointer', display: 'inline-block'}}>
+                    {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} style={{display: 'none'}} disabled={uploadingLogo} />
+                  </label>
+                  <span style={{color: '#888'}}>or</span>
+                  <input 
+                    placeholder="Paste URL" 
+                    value={contractMetadata.logoUrl}
+                    onChange={e => setContractMetadata({...contractMetadata, logoUrl: e.target.value})}
+                    style={{...styles.input, flex: 1}}
+                  />
+                </div>
+                {contractMetadata.logoUrl && (
+                  <div style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <img src={contractMetadata.logoUrl} alt="Logo preview" style={{width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover'}} onError={e => e.target.style.display='none'} />
+                    <button onClick={() => setContractMetadata({...contractMetadata, logoUrl: ''})} style={{...styles.btn, background: '#f44336', padding: '5px 10px'}}>Remove</button>
+                  </div>
+                )}
+              </div>
               <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
                 <div style={styles.formGroup}>
                   <label>Website URL</label>
@@ -957,7 +1565,10 @@ function DexTab({ wallet, setShowWallet }) {
       
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24}}>
         <div style={{background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: 20}}>
-          <div style={{fontSize: 14, color: '#8b949e', marginBottom: 8}}>NNET Price</div>
+          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8}}>
+            <NnetLogo size={24} />
+            <span style={{fontSize: 14, color: '#8b949e'}}>NNET Price</span>
+          </div>
           <div style={{fontSize: 28, fontWeight: 'bold', color: '#4CAF50'}}>${neoPrice.toFixed(4)}</div>
         </div>
         <div style={{background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: 20}}>
@@ -1179,7 +1790,7 @@ function MiningTab({ wallet }) {
   const [copied, setCopied] = useState('');
 
   const GITHUB_REPO = 'https://github.com/neonetainetwork/neonet-miner';
-  const GITHUB_RAW = 'https://raw.githubusercontent.com/neonetainetwork/neonet-miner/main';
+  const MINER_DOWNLOAD = '/download/neonet_miner.py';
 
   useEffect(() => {
     loadStats();
@@ -1216,23 +1827,6 @@ function MiningTab({ wallet }) {
       setTimeout(() => setCopied(''), 2000);
     } catch (e) {
       alert('Copy failed: ' + text);
-    }
-  };
-
-  const downloadMiner = async () => {
-    try {
-      const response = await fetch(`${GITHUB_RAW}/neonet_miner.py`);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'neonet_miner.py';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (e) {
-      window.open(`${GITHUB_RAW}/neonet_miner.py`, '_blank');
     }
   };
 
@@ -1289,30 +1883,38 @@ function MiningTab({ wallet }) {
         </div>
       )}
 
-      {/* Download Energy Provider Section */}
-      <div style={{...styles.card, border: '2px solid #1976d2', background: 'linear-gradient(135deg, #0d2137 0%, #1a1a2e 100%)'}}>
-        <h3 style={{color: '#1976d2', marginBottom: 15}}>Download AI Energy Provider</h3>
-        <p style={{color: '#aaa', marginBottom: 20}}>Get the official script from GitHub to start powering the AI network and earn NNET.</p>
+      {/* Download Miner Section */}
+      <div style={{...styles.card, border: '2px solid #4CAF50', background: 'linear-gradient(135deg, #0d2137 0%, #1a1a2e 100%)'}}>
+        <h3 style={{color: '#4CAF50', marginBottom: 15}}>Download NeoNet Miner</h3>
+        <p style={{color: '#aaa', marginBottom: 20}}>One script - your computer becomes a network node. AI runs locally and maintains the network.</p>
         
         <div style={{display: 'flex', gap: 15, flexWrap: 'wrap', marginBottom: 20}}>
-          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" style={{...styles.btn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8}}>
-            View on GitHub
-          </a>
-          <button onClick={downloadMiner} style={{...styles.btn, background: '#4CAF50'}}>
+          <a href={MINER_DOWNLOAD} download style={{...styles.btn, textDecoration: 'none', background: '#4CAF50', fontWeight: 'bold', fontSize: 16, padding: '15px 30px'}}>
             Download neonet_miner.py
-          </button>
-          <a href={`${GITHUB_REPO}/discussions`} target="_blank" rel="noopener noreferrer" style={{...styles.btn, textDecoration: 'none', background: '#238636'}}>
-            Community
           </a>
-          <a href={`${GITHUB_REPO}/issues`} target="_blank" rel="noopener noreferrer" style={{...styles.btn, textDecoration: 'none', background: '#e91e63'}}>
-            Report Issues
+          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" style={{...styles.btn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8}}>
+            GitHub
           </a>
         </div>
+        
+        <div style={{background: '#1a1a2e', padding: 15, borderRadius: 4, fontFamily: 'monospace', fontSize: 14, marginBottom: 15}}>
+          <div style={{color: '#888', marginBottom: 8}}># Install dependencies</div>
+          <code style={{color: '#4CAF50'}}>pip install aiohttp numpy</code>
+        </div>
+        
+        <div style={{background: '#1a1a2e', padding: 15, borderRadius: 4, fontFamily: 'monospace', fontSize: 14}}>
+          <div style={{color: '#888', marginBottom: 8}}># Start mining</div>
+          <code style={{color: '#4CAF50'}}>python neonet_miner.py --wallet neo1your_wallet</code>
+        </div>
+        
+        <p style={{color: '#888', marginTop: 15, fontSize: 13}}>
+          The script automatically: starts AI → connects to network → processes tasks → earns NNET rewards
+        </p>
       </div>
 
       <div style={styles.card}>
         <h3>Quick Start Guide</h3>
-        <p style={{color: '#aaa', marginBottom: 20}}>Follow these steps to start providing energy to NeoNet AI network:</p>
+        <p style={{color: '#aaa', marginBottom: 20}}>Follow these steps to start mining on NeoNet:</p>
         
         <div style={{background: '#0a1929', padding: 20, borderRadius: 8, marginBottom: 20}}>
           <h4 style={{color: '#1976d2', marginBottom: 15}}>Step 1: Install Python Dependencies</h4>
@@ -1322,23 +1924,20 @@ function MiningTab({ wallet }) {
         </div>
 
         <div style={{background: '#0a1929', padding: 20, borderRadius: 8, marginBottom: 20}}>
-          <h4 style={{color: '#1976d2', marginBottom: 15}}>Step 2: Download Energy Provider</h4>
-          <p style={{color: '#888', marginBottom: 10}}>Download neonet_miner.py from GitHub - this is the script that provides energy to the network.</p>
-          <button 
-            onClick={() => copyToClipboard('https://github.com/neonetainetwork/neonet-miner', 'github')}
-            style={{...styles.btn, padding: '8px 15px', fontSize: 14}}
-          >
-            {copied === 'github' ? 'Copied!' : 'Copy GitHub Link'}
-          </button>
+          <h4 style={{color: '#1976d2', marginBottom: 15}}>Step 2: Download Miner</h4>
+          <p style={{color: '#888', marginBottom: 10}}>Download neonet_miner.py - this is the full node that runs AI locally.</p>
+          <a href={MINER_DOWNLOAD} download style={{...styles.btn, textDecoration: 'none', background: '#4CAF50'}}>
+            Download neonet_miner.py
+          </a>
         </div>
 
         <div style={{background: '#0a1929', padding: 20, borderRadius: 8, marginBottom: 20}}>
-          <h4 style={{color: '#1976d2', marginBottom: 15}}>Step 3: Start Providing Energy</h4>
+          <h4 style={{color: '#1976d2', marginBottom: 15}}>Step 3: Start Mining</h4>
           <div style={{background: '#1a1a2e', padding: 15, borderRadius: 4, fontFamily: 'monospace', fontSize: 14, marginBottom: 10}}>
-            <code style={{color: '#4CAF50'}}>python neonet_miner.py --server {serverUrl}</code>
+            <code style={{color: '#4CAF50'}}>python neonet_miner.py --wallet neo1your_wallet</code>
           </div>
           <button 
-            onClick={() => copyToClipboard(`python neonet_miner.py --server ${serverUrl}`, 'cmd')}
+            onClick={() => copyToClipboard('python neonet_miner.py --wallet neo1your_wallet', 'cmd')}
             style={{...styles.btn, padding: '8px 15px', fontSize: 14}}
           >
             {copied === 'cmd' ? 'Copied!' : 'Copy Command'}
@@ -1347,18 +1946,16 @@ function MiningTab({ wallet }) {
       </div>
 
       <div style={styles.card}>
-        <h3>Provider Options</h3>
+        <h3>Command Options</h3>
         <table style={styles.table}>
           <thead>
             <tr><th>Option</th><th>Description</th><th>Example</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>--server</code></td><td>NeoNet server to power</td><td>{serverUrl}</td></tr>
-            <tr><td><code>--wallet</code></td><td>Your wallet for NNET rewards</td><td>neo1abc...</td></tr>
-            <tr><td><code>--id</code></td><td>Your provider ID (auto-generated)</td><td>my_provider_001</td></tr>
-            <tr><td><code>--cpu</code></td><td>CPU cores to dedicate</td><td>8</td></tr>
-            <tr><td><code>--gpu-mem</code></td><td>GPU memory to use (0 = CPU only)</td><td>8192</td></tr>
-            <tr><td><code>--gpu-model</code></td><td>GPU model name</td><td>RTX 4090</td></tr>
+            <tr><td><code>--wallet</code></td><td>Your wallet address for NNET rewards</td><td>neo1abc...</td></tr>
+            <tr><td><code>--port</code></td><td>P2P port (default: 8080)</td><td>9000</td></tr>
+            <tr><td><code>--cpu</code></td><td>Number of CPU cores to use</td><td>8</td></tr>
+            <tr><td><code>--gpu-mem</code></td><td>GPU memory in MB (0 = CPU only)</td><td>8192</td></tr>
           </tbody>
         </table>
       </div>
@@ -1392,7 +1989,7 @@ function MiningTab({ wallet }) {
         
         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 15, marginBottom: 20}}>
           <div style={{background: '#0d1117', padding: 15, borderRadius: 8, textAlign: 'center'}}>
-            <div style={{color: '#4CAF50', fontSize: 24, fontWeight: 'bold'}}>1.00 NNET</div>
+            <div style={{color: '#4CAF50', fontSize: 24, fontWeight: 'bold'}}>0.05 NNET</div>
             <div style={{color: '#888', fontSize: 13}}>Max Task Reward</div>
           </div>
           <div style={{background: '#0d1117', padding: 15, borderRadius: 8, textAlign: 'center'}}>
@@ -1417,48 +2014,57 @@ function MiningTab({ wallet }) {
       <div style={styles.card}>
         <h3>Example Output</h3>
         <div style={{background: '#0a0a0a', padding: 15, borderRadius: 4, fontFamily: 'monospace', fontSize: 13, color: '#aaa', whiteSpace: 'pre-wrap'}}>
-{`============================================================
-    NeoNet AI ENERGY PROVIDER
-    You are the power source for the AI network
+{`╔═══════════════════════════════════════════════════════╗
+║           NeoNet Miner v1.0                           ║
+║       AI-Powered Web4 Blockchain Network              ║
+║       Token: NNET                                     ║
+╚═══════════════════════════════════════════════════════╝
 ============================================================
-Server: ${serverUrl}
-Provider ID: provider_a1b2c3d4e5f6
-CPU Cores: 8 | GPU: RTX 4090 (8192MB)
+    NeoNet Full Node - AI Network
+============================================================
+Wallet: neo1your_wallet
+Port: 8080
+CPU: 8 cores
 ------------------------------------------------------------
-[OK] Registered as energy provider
-[OK] Session started - PROVIDING ENERGY TO NEONET
+[NODE] Local AI node started on port 8080
+[NET] Connected to NeoNet
 
-[ENERGY] Powering fraud_detection task...
-[DONE] Powered in 1.2s
-[REWARD] +0.0800 NNET | Total: 0.0800 NNET
+[AI] Processing: fraud_detection
+[OK] Completed in 45ms
+[NNET] +0.0250 | Total: 0.0250 NNET
 
-[ENERGY] Powering model_training task...
-[DONE] Powered in 2.5s  
-[REWARD] +0.1200 NNET | Total: 0.2000 NNET
+[AI] Processing: model_training
+[OK] Completed in 120ms
+[NNET] +0.0400 | Total: 0.0650 NNET
 
-[STATUS] AI Tasks Powered: 2 | NNET Earned: 0.2000`}
+[AI] Processing: federated_learning
+[OK] Completed in 200ms
+[NNET] +0.0500 | Total: 0.1150 NNET
+
+[SYNC] Peers: 15 | Blockchain: 1250 blocks
+[INFO] Daily estimate: ~3.5 NNET (24h mining)`}
         </div>
       </div>
 
       <div style={styles.card}>
         <h3>Run 24/7 as Background Service (Linux)</h3>
-        <p style={{color: '#888', marginBottom: 15}}>Create a systemd service to provide energy to the network constantly:</p>
+        <p style={{color: '#888', marginBottom: 15}}>Create a systemd service to run the miner constantly:</p>
         <div style={{background: '#1a1a2e', padding: 15, borderRadius: 4, fontFamily: 'monospace', fontSize: 12, color: '#aaa', whiteSpace: 'pre-wrap'}}>
 {`[Unit]
-Description=NeoNet AI Energy Provider
+Description=NeoNet Miner
 After=network.target
 
 [Service]
 Type=simple
 User=yourusername
-WorkingDirectory=/path/to/provider
-ExecStart=/usr/bin/python3 neonet_miner.py --server ${serverUrl} --wallet YOUR_WALLET
+WorkingDirectory=/path/to/miner
+ExecStart=/usr/bin/python3 neonet_miner.py --wallet YOUR_WALLET
 Restart=always
 
 [Install]
 WantedBy=multi-user.target`}
         </div>
-        <p style={{color: '#888', marginTop: 15, fontSize: 13}}>Save as <code>/etc/systemd/system/neonet-energy.service</code>, then run: <code>sudo systemctl enable --now neonet-energy</code></p>
+        <p style={{color: '#888', marginTop: 15, fontSize: 13}}>Save as <code>/etc/systemd/system/neonet-miner.service</code>, then run: <code>sudo systemctl enable --now neonet-miner</code></p>
       </div>
 
       <div style={styles.card}>
@@ -1858,8 +2464,12 @@ function AppContent() {
                   <div style={styles.statLabel}>Total NNET Supply</div>
                 </div>
                 <div style={styles.statItem} className="stat-item">
-                  <div style={styles.statValue} className="stat-value">12.5s</div>
+                  <div style={styles.statValue} className="stat-value">3s</div>
                   <div style={styles.statLabel}>Block Time</div>
+                </div>
+                <div style={styles.statItem} className="stat-item">
+                  <div style={styles.statValue} className="stat-value">50,000</div>
+                  <div style={styles.statLabel}>TPS</div>
                 </div>
                 <div style={styles.statItem} className="stat-item">
                   <div style={styles.statValue} className="stat-value">EVM+WASM</div>
@@ -1983,7 +2593,10 @@ function AppContent() {
                 <h3 style={{color: '#4CAF50', marginBottom: 16}}>Your Account Summary</h3>
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16}}>
                   <div style={{textAlign: 'center', padding: 16, background: '#161b22', borderRadius: 8}}>
-                    <div style={{fontSize: 28, fontWeight: 'bold', color: '#4CAF50'}}>{(wallet.balances?.NNET || 0).toLocaleString()}</div>
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8}}>
+                      <NnetLogo size={32} />
+                      <div style={{fontSize: 28, fontWeight: 'bold', color: '#4CAF50'}}>{(wallet.balances?.NNET || 0).toLocaleString()}</div>
+                    </div>
                     <div style={{color: '#8b949e', fontSize: 14}}>NNET Balance</div>
                   </div>
                   <div style={{textAlign: 'center', padding: 16, background: '#161b22', borderRadius: 8}}>
@@ -2087,8 +2700,13 @@ function AppContent() {
                 <div style={styles.card}>
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
                     <div>
-                      <div style={styles.cardLabel}>NNET Balance</div>
-                      <div style={styles.cardValue}>{(wallet.balances?.NNET || 0).toLocaleString()} NNET</div>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                        <NnetLogo size={40} />
+                        <div>
+                          <div style={styles.cardLabel}>NNET Balance</div>
+                          <div style={styles.cardValue}>{(wallet.balances?.NNET || 0).toLocaleString()} NNET</div>
+                        </div>
+                      </div>
                     </div>
                     <div style={{textAlign: 'right'}}>
                       <div style={{color: '#8b949e', fontSize: 12}}>NNET Price</div>
@@ -2101,15 +2719,22 @@ function AppContent() {
                   </p>
                 </div>
                 
-                {wallet.tokens && wallet.tokens.length > 1 && (
+                {wallet.tokens && wallet.tokens.length > 0 && (
                   <div style={styles.card}>
-                    <div style={styles.cardLabel}>All Token Balances</div>
+                    <div style={styles.cardLabel}>💰 My Tokens</div>
                     <div style={{marginTop: 12}}>
                       {wallet.tokens.map(t => (
-                        <div key={t.symbol} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #30363d'}}>
-                          <div>
-                            <span style={{fontWeight: 'bold', color: t.symbol === 'NNET' ? '#4CAF50' : '#58a6ff'}}>{t.symbol}</span>
-                            <span style={{color: '#8b949e', fontSize: 12, marginLeft: 8}}>{t.name}</span>
+                        <div key={t.symbol} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #30363d'}}>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                            {t.image_url ? (
+                              <img src={t.image_url} alt={t.symbol} style={{width: 40, height: 40, borderRadius: '50%', objectFit: 'cover'}} onError={e => e.target.style.display='none'} />
+                            ) : (
+                              <div style={{width: 40, height: 40, borderRadius: '50%', background: t.symbol === 'NNET' ? '#4CAF50' : '#58a6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff'}}>{t.symbol?.charAt(0)}</div>
+                            )}
+                            <div>
+                              <span style={{fontWeight: 'bold', color: t.symbol === 'NNET' ? '#4CAF50' : '#58a6ff'}}>{t.symbol}</span>
+                              <span style={{color: '#8b949e', fontSize: 12, marginLeft: 8}}>{t.name}</span>
+                            </div>
                           </div>
                           <div style={{textAlign: 'right'}}>
                             <div style={{fontWeight: 'bold'}}>{t.balance?.toLocaleString() || 0}</div>
@@ -2120,6 +2745,8 @@ function AppContent() {
                     </div>
                   </div>
                 )}
+
+                <WalletNFTSection wallet={wallet} />
               </>
             )}
           </div>
@@ -2420,7 +3047,7 @@ function AppContent() {
         )}
 
         {tab === 'explore' && (
-          <ExploreTab />
+          <ExploreTab wallet={wallet} />
         )}
 
         {tab === 'developer' && (

@@ -485,20 +485,20 @@ The network automatically shifts from centralized bootstrap to distributed opera
 
 ```
 Phase 1: Bootstrap (0-10 miners)
-  └── Replit servers handle 100% of load
+  └── Bootstrap servers handle 100% of load
   └── Miners observe and earn rewards
 
 Phase 2: Transition (10-100 miners)
-  └── Load distributed: Replit 50%, Miners 50%
+  └── Load distributed: Bootstrap 50%, Miners 50%
   └── State replicated across miners
 
 Phase 3: Distributed (100-1000 miners)
   └── Miners handle 90% of load
-  └── Replit acts as fallback only
+  └── Bootstrap acts as fallback only
 
 Phase 4: Fully Decentralized (1000+ miners)
   └── Miners handle 100% of load
-  └── Replit can be shut down
+  └── Bootstrap server can be shut down
   └── Network is fully autonomous
 ```
 
@@ -509,15 +509,15 @@ def calculate_decentralization_level():
     miners = count_active_miners()
     
     if miners < 10:
-        return {"replit": 100, "miners": 0, "phase": "bootstrap"}
+        return {"bootstrap": 100, "miners": 0, "phase": "bootstrap"}
     elif miners < 100:
         miner_share = (miners - 10) / 90 * 50
-        return {"replit": 100 - miner_share, "miners": miner_share, "phase": "transition"}
+        return {"bootstrap": 100 - miner_share, "miners": miner_share, "phase": "transition"}
     elif miners < 1000:
         miner_share = 50 + (miners - 100) / 900 * 40
-        return {"replit": 100 - miner_share, "miners": miner_share, "phase": "distributed"}
+        return {"bootstrap": 100 - miner_share, "miners": miner_share, "phase": "distributed"}
     else:
-        return {"replit": 0, "miners": 100, "phase": "decentralized"}
+        return {"bootstrap": 0, "miners": 100, "phase": "decentralized"}
 ```
 
 ### 9.4 Data Replication
@@ -689,7 +689,7 @@ NeoNet Network
 
 ### Phase 3: Maturity (Q2 2026)
 - [ ] 1000+ active miners
-- [ ] Full decentralization (Replit shutdown)
+- [ ] Full decentralization (bootstrap server shutdown)
 - [ ] DEX with limit orders
 - [ ] Governance v2
 
@@ -739,7 +739,8 @@ Join the Web4 revolution. Provide your computing power. Earn NNET.
 - Website: https://neonetainetwork.com
 - Documentation: https://neonetainetwork.info
 - Community: https://neonetainetwork.org
-- GitHub: https://github.com/neonetainetwork
+- GitHub (Public): https://github.com/neonetainetwork/neonet-public
+- Discussions: https://github.com/neonetainetwork/neonet-public/discussions
 
 ---
 

@@ -29,7 +29,6 @@ import webbrowser
 from typing import Optional
 
 NEONET_SERVERS = [
-    "https://neonet-ai-blockchain-neonetainetwork.replit.app",
     "https://neonetainetwork.com",
     "http://localhost:5000"
 ]

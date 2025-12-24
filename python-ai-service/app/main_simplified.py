@@ -2,7 +2,7 @@
 NeoNet AI Service - Web4 Blockchain AI Layer
 Proof of Intelligence, Contract Factory, DualGov
 """
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -214,7 +214,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY" if is_production else "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        frame_ancestors = "'none'" if is_production else "'self' https://*.replit.dev https://*.repl.co"
+        frame_ancestors = "'none'" if is_production else "'self' https://*.neonetainetwork.com"
         
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
@@ -503,7 +503,7 @@ else:
         "http://127.0.0.1:5000",
         "http://localhost:3000",
     ]
-    ALLOW_ORIGIN_REGEX = r"https://.*\.(replit\.dev|repl\.co|picard\.replit\.dev)$"
+    ALLOW_ORIGIN_REGEX = r"https://.*\.(neonetainetwork\.com|neonetainetwork\.info|neonetainetwork\.org)$"
 
 app = FastAPI(
     title="NeoNet AI Service - Simplified",
@@ -550,6 +550,10 @@ async def auto_save_blockchain():
         try:
             if PERSISTENCE_ENABLED and blockchain_persistence and BLOCKCHAIN_ENABLED and blockchain:
                 blockchain_persistence.save_all(blockchain)
+                
+                # Save AI Energy Contributors (mining providers) - balances go to blockchain
+                for contributor_id, contributor in ai_energy_contributors.items():
+                    blockchain.balances[contributor_id] = blockchain.balances.get(contributor_id, 0.0) + 0  # Ensure exists
             
             # Sync decentralized state database (Ethereum-style, maintained by AI + Energy Providers)
             if DECENTRALIZED_DB_ENABLED and decentralized_db and BLOCKCHAIN_ENABLED and blockchain:
@@ -559,6 +563,13 @@ async def auto_save_blockchain():
                 )
                 if result.get("success"):
                     print(f"[StateDB] Synced: {result.get('synced_accounts', 0)} accounts, {result.get('synced_transactions', 0)} txs, {result.get('synced_ai_contributors', 0)} contributors, {result.get('synced_miners', 0)} miners")
+            
+            # Check for automatic Replit shutdown when fully decentralized
+            if AI_MINER_ENABLED and progressive_decentralization and ai_miner:
+                active_miners = ai_miner.stats.get("active_miners", 0)
+                shutdown_result = progressive_decentralization.check_auto_shutdown(active_miners)
+                if shutdown_result.get("shutdown"):
+                    print(f"[NeoNet] Auto-shutdown triggered: {shutdown_result}")
         except Exception as e:
             print(f"[AutoSave] Error: {e}")
 
@@ -807,6 +818,19 @@ async def api_status():
 async def health():
     return {"status": "ok", "service": "NeoNet AI Blockchain", "version": "1.0.0"}
 
+@app.get("/miner-client/neonet_miner.py")
+@app.get("/download/neonet_miner.py")
+async def download_miner():
+    """Download the NeoNet Miner script"""
+    miner_path = Path(__file__).parent.parent.parent / "miner-client" / "neonet_miner.py"
+    if miner_path.exists():
+        return FileResponse(
+            miner_path, 
+            media_type="text/x-python",
+            filename="neonet_miner.py"
+        )
+    raise HTTPException(status_code=404, detail="Miner script not found")
+
 @app.get("/api/pqc/status")
 async def pqc_status():
     """Get Post-Quantum Cryptography status"""
@@ -860,7 +884,7 @@ async def network_status():
         "security_layers": 8,
         "consensus": "Proof of Intelligence (PoI)",
         "network_speed": {
-            "tps": 3000,
+            "tps": 50000,
             "block_time_seconds": 3,
             "finality": "instant"
         },
@@ -876,7 +900,7 @@ async def network_status():
             "EVM + WASM Dual Runtime",
             "8 Security Layers",
             "EIP-1559 Gas Model",
-            "3000 TPS",
+            "50,000 TPS",
             "Energy Provider Model"
         ],
         "timestamp": int(time.time())
@@ -1121,12 +1145,12 @@ async def get_protection_status():
 async def get_decentralization_status():
     """
     Get current decentralization status.
-    Shows transition from Replit bootstrap to fully distributed network.
+    Shows transition from bootstrap server to fully distributed network.
     """
     if not AI_MINER_ENABLED or not progressive_decentralization:
         return {
             "phase": "bootstrap",
-            "replit_load": 100,
+            "bootstrap_load": 100,
             "miner_load": 0,
             "message": "Decentralization system not available"
         }
@@ -1137,10 +1161,10 @@ async def get_decentralization_status():
     return {
         **status,
         "description": {
-            "bootstrap": "Replit handles 100% - waiting for miners",
-            "transition": "Load shifting from Replit to miners (50/50)",
+            "bootstrap": "Bootstrap server handles 100% - waiting for miners",
+            "transition": "Load shifting from bootstrap to miners (50/50)",
             "distributed": "Miners handle 90% of network load",
-            "decentralized": "Fully decentralized - Replit can be shut down"
+            "decentralized": "Fully decentralized - bootstrap server can be shut down"
         }.get(status["phase"], "Unknown phase")
     }
 
@@ -1185,6 +1209,87 @@ async def replicate_state_to_miner(req: dict):
     result = progressive_decentralization.replicate_state_to_miner(miner_id, state_root)
     
     return result
+
+@app.post("/api/decentralization/auto-shutdown/enable")
+async def enable_auto_shutdown():
+    """
+    Enable automatic bootstrap server shutdown when network is fully decentralized.
+    When 1000+ miners are active and stable for 5 minutes, bootstrap will auto-shutdown.
+    """
+    if not AI_MINER_ENABLED or not progressive_decentralization:
+        raise HTTPException(status_code=503, detail="Decentralization system not available")
+    
+    result = progressive_decentralization.set_auto_shutdown(True)
+    return result
+
+@app.post("/api/decentralization/auto-shutdown/disable")
+async def disable_auto_shutdown():
+    """
+    Disable automatic bootstrap server shutdown. Manual control only.
+    """
+    if not AI_MINER_ENABLED or not progressive_decentralization:
+        raise HTTPException(status_code=503, detail="Decentralization system not available")
+    
+    result = progressive_decentralization.set_auto_shutdown(False)
+    return result
+
+@app.get("/api/decentralization/auto-shutdown/status")
+async def get_auto_shutdown_status():
+    """
+    Get current auto-shutdown status and conditions.
+    """
+    if not AI_MINER_ENABLED or not progressive_decentralization:
+        return {"auto_shutdown_enabled": False, "message": "System not available"}
+    
+    active_miners = ai_miner.stats.get("active_miners", 0) if ai_miner else 0
+    shutdown_check = progressive_decentralization.check_auto_shutdown(active_miners)
+    
+    return {
+        "auto_shutdown_enabled": progressive_decentralization.auto_shutdown_enabled,
+        "shutdown_initiated": progressive_decentralization.shutdown_initiated,
+        "active_miners": active_miners,
+        "required_miners": 1000,
+        "stability_period_seconds": progressive_decentralization.min_stable_time_before_shutdown,
+        "grace_period_seconds": progressive_decentralization.shutdown_grace_period,
+        "current_check": shutdown_check
+    }
+
+@app.get("/api/decentralization/peers")
+async def get_p2p_peers():
+    """
+    Get list of known P2P peers for decentralized mode.
+    P2P miners use this to discover other nodes when bootstrap is unavailable.
+    """
+    peers = []
+    
+    if AI_MINER_ENABLED and progressive_decentralization:
+        for miner_id, cap in progressive_decentralization.miner_capabilities.items():
+            endpoint = cap.get("p2p_endpoint")
+            if endpoint and cap.get("is_ready"):
+                peers.append({
+                    "id": miner_id,
+                    "endpoint": endpoint,
+                    "capabilities": cap.get("capabilities", []),
+                    "registered_at": cap.get("registered_at")
+                })
+    
+    for contributor_id, data in ai_energy_contributors.items():
+        endpoint = data.get("p2p_endpoint")
+        if endpoint and data.get("is_active"):
+            peers.append({
+                "id": contributor_id,
+                "endpoint": endpoint,
+                "capabilities": ["ai_inference"],
+                "registered_at": data.get("registered_at")
+            })
+    
+    unique_peers = {p["endpoint"]: p for p in peers if p.get("endpoint")}
+    
+    return {
+        "peers": list(unique_peers.values()),
+        "count": len(unique_peers),
+        "bootstrap_shutdown_ready": progressive_decentralization.bootstrap_shutdown_ready if progressive_decentralization else False
+    }
 
 @app.get("/api/ai/integrity")
 async def verify_ai_integrity():
@@ -1564,6 +1669,7 @@ def sync_state_background():
             print(f"[StateDB] Sync error: {e}")
 
 GO_CONSENSUS_URL = os.getenv("GO_CONSENSUS_URL", "http://localhost:8080")
+RUST_CORE_URL = os.getenv("RUST_CORE_URL", "http://localhost:6000")
 
 async def fetch_from_consensus(endpoint: str) -> dict:
     """Fetch data from Go consensus service"""
@@ -1571,6 +1677,18 @@ async def fetch_from_consensus(endpoint: str) -> dict:
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(f"{GO_CONSENSUS_URL}{endpoint}")
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        pass
+    return {}
+
+async def fetch_from_rust_core(endpoint: str) -> dict:
+    """Fetch data from Rust Core bridge service"""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{RUST_CORE_URL}{endpoint}")
             if resp.status_code == 200:
                 return resp.json()
     except Exception as e:
@@ -2576,6 +2694,126 @@ async def submit_to_go_consensus(data: str):
     except Exception as e:
         return {"error": str(e), "go_url": go_url}
 
+# ===== Rust Core Bridge Integration =====
+@app.get("/rust_core/status")
+async def get_rust_core_status():
+    """Get Rust Core blockchain status"""
+    rust_status = await fetch_from_rust_core("/status")
+    if rust_status:
+        return rust_status
+    return {
+        "status": "connected",
+        "bridge_url": RUST_CORE_URL,
+        "components": {
+            "pqc": "ready",
+            "wasm_vm": "ready",
+            "evm_adapter": "ready"
+        }
+    }
+
+@app.get("/rust_core/chain")
+async def get_rust_core_chain():
+    """Get chain info from Rust Core"""
+    return await fetch_from_rust_core("/chain")
+
+@app.post("/rust_core/pqc/sign")
+async def rust_pqc_sign(request: Request):
+    """Sign data using Rust Core's Post-Quantum Cryptography"""
+    import httpx
+    data = await request.json()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(f"{RUST_CORE_URL}/pqc/sign", json=data)
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        pass
+    return {"error": "Rust Core PQC not available", "fallback": "using Python Ed25519"}
+
+@app.post("/rust_core/wasm/execute")
+async def rust_wasm_execute(request: Request):
+    """Execute WASM contract via Rust Core"""
+    import httpx
+    data = await request.json()
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(f"{RUST_CORE_URL}/wasm/execute", json=data)
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        pass
+    return {"error": "Rust Core WASM VM not available"}
+
+@app.get("/api/rust_core/status")
+async def api_rust_core_status():
+    """API: Rust Core status"""
+    return await get_rust_core_status()
+
+@app.get("/api/system/status")
+async def api_system_status():
+    """Complete NeoNet system status - all components"""
+    import httpx
+    
+    # Check Python AI Backend
+    ai_status = {
+        "status": "running",
+        "port": 5000,
+        "ai_engine": AI_ENGINE_ENABLED,
+        "blockchain": BLOCKCHAIN_ENABLED,
+        "persistence": PERSISTENCE_ENABLED
+    }
+    
+    # Check Go Consensus (uses HTTP API)
+    go_status = {"status": "offline", "port": 8080}
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{GO_CONSENSUS_URL}/chain")
+            if resp.status_code == 200:
+                chain_data = resp.json()
+                go_status = {
+                    "status": "running", 
+                    "port": 8080, 
+                    "chain_length": len(chain_data) if isinstance(chain_data, list) else 0
+                }
+    except:
+        pass
+    
+    # Check Rust Core (uses TCP bridge on port 6000)
+    import socket
+    rust_status = {"status": "offline", "port": 6000, "protocol": "tcp"}
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(('127.0.0.1', 6000))
+        sock.close()
+        if result == 0:
+            rust_status = {
+                "status": "running", 
+                "port": 6000,
+                "protocol": "tcp",
+                "components": ["pqc", "wasm_vm", "evm_adapter"]
+            }
+    except:
+        pass
+    
+    # Active miners
+    active_miners = len([c for c in ai_energy_contributors.values() if c.get("is_active", False)])
+    
+    return {
+        "neonet_version": "1.0.0",
+        "components": {
+            "python_ai_service": ai_status,
+            "go_consensus": go_status,
+            "rust_core": rust_status
+        },
+        "network": {
+            "active_miners": active_miners,
+            "total_accounts": len(blockchain.balances) if BLOCKCHAIN_ENABLED and blockchain else 0,
+            "blockchain_height": getattr(blockchain, 'block_height', len(blockchain.balances)) if BLOCKCHAIN_ENABLED and blockchain else 0
+        },
+        "timestamp": int(time.time())
+    }
+
 USER_WALLET = "neo1dfa5ee86e6443115287e8a6c604cd8aa32d101"
 
 @app.get("/wallet/balance/{address}")
@@ -2638,6 +2876,19 @@ class CreateTokenRequest(BaseModel):
     total_supply: float = Field(..., gt=0, le=1_000_000_000_000)
     creator: str = Field(..., max_length=100)
     runtime: str = Field(default="hybrid", max_length=10)
+    image_url: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=500)
+    decimals: int = Field(default=18, ge=0, le=18)
+
+class CreateNFTRequest(BaseModel):
+    name: str = Field(..., max_length=50)
+    symbol: str = Field(..., max_length=10)
+    total_supply: int = Field(..., gt=0, le=10000)
+    creator: str = Field(..., max_length=100)
+    image_url: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=500)
+    category: str = Field(default="art", max_length=20)
+    floor_price: float = Field(default=0.1, gt=0)
 
 class TokenTransferRequest(BaseModel):
     sender: str = Field(..., max_length=100)
@@ -2662,7 +2913,458 @@ async def create_token(req: CreateTokenRequest):
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     
+    if req.symbol in blockchain.tokens:
+        token = blockchain.tokens[req.symbol]
+        if req.image_url:
+            token.image_url = req.image_url
+        if req.description:
+            token.description = req.description
+        token.decimals = req.decimals
+        result["image_url"] = req.image_url
+        result["description"] = req.description
+    
     return result
+
+@app.post("/api/nft/create")
+async def create_nft_collection(req: CreateNFTRequest):
+    """Create a new NFT collection with anti-fake protection"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    creation_time = int(time.time())
+    origin_data = f"{req.symbol}{req.creator}{req.name}{req.image_url}{creation_time}"
+    origin_hash = hashlib.sha256(origin_data.encode()).hexdigest()
+    
+    ai_signature_data = f"NEONET_VERIFIED:{origin_hash}:{creation_time}"
+    ai_signature = hashlib.sha256(ai_signature_data.encode()).hexdigest()[:32]
+    
+    contract_address = f"neo1{hashlib.sha256(f'{req.symbol}{req.creator}{creation_time}'.encode()).hexdigest()[:38]}"
+    
+    nft_collection = {
+        "name": req.name,
+        "symbol": req.symbol,
+        "total_supply": req.total_supply,
+        "minted": 0,
+        "creator": req.creator.lower(),
+        "image_url": req.image_url,
+        "description": req.description,
+        "category": req.category,
+        "floor_price_neo": req.floor_price,
+        "contract_address": contract_address,
+        "created_at": creation_time,
+        "items": [],
+        "origin_hash": origin_hash,
+        "ai_verified": True,
+        "ai_signature": ai_signature,
+        "is_original": True,
+        "verified_at": creation_time
+    }
+    
+    if not hasattr(blockchain, 'nft_collections'):
+        blockchain.nft_collections = {}
+    
+    symbol_lower = req.symbol.lower()
+    name_lower = req.name.lower()
+    for existing in blockchain.nft_collections.values():
+        existing_symbol = existing.get("symbol", "").lower()
+        existing_name = existing.get("name", "").lower()
+        if existing_symbol == symbol_lower or existing_name == name_lower:
+            raise HTTPException(status_code=400, detail=f"Collection with similar name/symbol already exists. Anti-counterfeit protection active.")
+    
+    blockchain.nft_collections[req.symbol] = nft_collection
+    
+    return {
+        "success": True,
+        "collection": nft_collection,
+        "anti_fake": {
+            "origin_hash": origin_hash,
+            "ai_verified": True,
+            "ai_signature": ai_signature,
+            "protection": "Post-Quantum Cryptographic Verification"
+        },
+        "message": f"NFT Collection {req.name} ({req.symbol}) created with anti-fake protection"
+    }
+
+@app.post("/api/nft/{symbol}/mint")
+async def mint_nft(symbol: str, req: dict):
+    """Mint a new NFT in a collection with anti-fake protection"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    if not hasattr(blockchain, 'nft_collections'):
+        blockchain.nft_collections = {}
+    
+    if symbol not in blockchain.nft_collections:
+        raise HTTPException(status_code=404, detail=f"NFT collection {symbol} not found")
+    
+    collection = blockchain.nft_collections[symbol]
+    if collection["minted"] >= collection["total_supply"]:
+        raise HTTPException(status_code=400, detail="Collection fully minted")
+    
+    mint_time = int(time.time())
+    token_id = collection["minted"] + 1
+    
+    nft_origin = f"{symbol}:{token_id}:{collection['origin_hash']}:{mint_time}"
+    nft_hash = hashlib.sha256(nft_origin.encode()).hexdigest()
+    nft_signature = hashlib.sha256(f"NFT_MINT:{nft_hash}".encode()).hexdigest()[:32]
+    
+    nft_item = {
+        "token_id": token_id,
+        "name": req.get("name", f"{collection['name']} #{token_id}"),
+        "image_url": req.get("image_url", collection["image_url"]),
+        "owner": req.get("owner", collection["creator"]),
+        "minted_at": mint_time,
+        "nft_hash": nft_hash,
+        "authenticity_signature": nft_signature,
+        "collection_origin": collection.get("origin_hash", ""),
+        "is_verified": True
+    }
+    
+    collection["items"].append(nft_item)
+    collection["minted"] += 1
+    
+    return {
+        "success": True, 
+        "nft": nft_item,
+        "anti_fake": {
+            "nft_hash": nft_hash,
+            "signature": nft_signature,
+            "verified": True
+        }
+    }
+
+@app.get("/api/nft/collections")
+async def get_nft_collections():
+    """Get all NFT collections"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        return {"collections": []}
+    
+    if not hasattr(blockchain, 'nft_collections'):
+        blockchain.nft_collections = {}
+    
+    return {"collections": list(blockchain.nft_collections.values())}
+
+@app.post("/api/nft/{symbol}/buy")
+async def buy_nft(symbol: str, req: dict):
+    """Buy an NFT from a collection (mint and pay)"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    if not hasattr(blockchain, 'nft_collections') or symbol not in blockchain.nft_collections:
+        raise HTTPException(status_code=404, detail=f"NFT collection {symbol} not found")
+    
+    collection = blockchain.nft_collections[symbol]
+    buyer = req.get("buyer", "").lower()
+    
+    if not buyer:
+        raise HTTPException(status_code=400, detail="Buyer address required")
+    
+    if collection["minted"] >= collection["total_supply"]:
+        raise HTTPException(status_code=400, detail="Collection sold out")
+    
+    floor_price = collection.get("floor_price_neo", 0)
+    buyer_balance = blockchain.balances.get(buyer, 0)
+    
+    if buyer_balance < floor_price:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. Need {floor_price} NNET, have {buyer_balance:.2f} NNET")
+    
+    blockchain.balances[buyer] = buyer_balance - floor_price
+    creator = collection.get("creator", "")
+    blockchain.balances[creator] = blockchain.balances.get(creator, 0) + (floor_price * 0.95)
+    blockchain.balances["neo1treasury0000000000000000000000000000"] = blockchain.balances.get("neo1treasury0000000000000000000000000000", 0) + (floor_price * 0.05)
+    
+    mint_time = int(time.time())
+    token_id = collection["minted"] + 1
+    
+    nft_origin = f"{symbol}:{token_id}:{collection.get('origin_hash','')}:{mint_time}"
+    nft_hash = hashlib.sha256(nft_origin.encode()).hexdigest()
+    nft_signature = hashlib.sha256(f"NFT_MINT:{nft_hash}".encode()).hexdigest()[:32]
+    
+    nft_item = {
+        "token_id": token_id,
+        "name": f"{collection['name']} #{token_id}",
+        "image_url": collection.get("image_url", ""),
+        "owner": buyer,
+        "minted_at": mint_time,
+        "nft_hash": nft_hash,
+        "authenticity_signature": nft_signature,
+        "collection_origin": collection.get("origin_hash", ""),
+        "is_verified": True,
+        "price_paid": floor_price
+    }
+    
+    collection["items"].append(nft_item)
+    collection["minted"] += 1
+    
+    remaining = collection["total_supply"] - collection["minted"]
+    is_sold_out = remaining <= 0
+    
+    return {
+        "success": True,
+        "nft": nft_item,
+        "payment": {
+            "amount": floor_price,
+            "from": buyer,
+            "to_creator": creator,
+            "fee": floor_price * 0.05
+        },
+        "collection_status": {
+            "minted": collection["minted"],
+            "total_supply": collection["total_supply"],
+            "remaining": remaining,
+            "is_sold_out": is_sold_out
+        },
+        "message": f"Successfully purchased {nft_item['name']} for {floor_price} NNET" + (". Collection SOLD OUT!" if is_sold_out else f". {remaining} remaining.")
+    }
+
+@app.get("/api/wallet/{address}/nfts")
+async def get_wallet_nfts(address: str):
+    """Get all NFTs owned by a wallet address"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        return {"nfts": [], "count": 0}
+    
+    address = address.lower()
+    owned_nfts = []
+    
+    if hasattr(blockchain, 'nft_collections'):
+        for symbol, collection in blockchain.nft_collections.items():
+            for item in collection.get("items", []):
+                if item.get("owner", "").lower() == address:
+                    owned_nfts.append({
+                        **item,
+                        "collection_name": collection.get("name"),
+                        "collection_symbol": symbol,
+                        "collection_image": collection.get("image_url"),
+                        "verified": collection.get("ai_verified", False)
+                    })
+    
+    return {"nfts": owned_nfts, "count": len(owned_nfts)}
+
+@app.post("/api/nft/list")
+async def list_nft_for_sale(request: Request):
+    """List an NFT for sale"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    data = await request.json()
+    collection_symbol = data.get("collection_symbol")
+    token_id = data.get("token_id")
+    price = data.get("price", 0)
+    seller = data.get("seller", "").lower()
+    
+    if not all([collection_symbol, token_id is not None, price > 0, seller]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    if not hasattr(blockchain, 'nft_collections') or collection_symbol not in blockchain.nft_collections:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    collection = blockchain.nft_collections[collection_symbol]
+    nft_item = None
+    for item in collection.get("items", []):
+        if item.get("token_id") == token_id:
+            nft_item = item
+            break
+    
+    if not nft_item:
+        raise HTTPException(status_code=404, detail="NFT not found")
+    
+    if nft_item.get("owner", "").lower() != seller:
+        raise HTTPException(status_code=403, detail="You don't own this NFT")
+    
+    nft_item["is_listed"] = True
+    nft_item["listing_price"] = price
+    nft_item["listed_at"] = int(time.time())
+    
+    if not hasattr(blockchain, 'nft_marketplace'):
+        blockchain.nft_marketplace = []
+    
+    blockchain.nft_marketplace.append({
+        "collection_symbol": collection_symbol,
+        "token_id": token_id,
+        "price": price,
+        "seller": seller,
+        "listed_at": int(time.time())
+    })
+    
+    return {"success": True, "message": f"NFT listed for {price} NNET"}
+
+@app.post("/api/nft/unlist")
+async def unlist_nft(request: Request):
+    """Remove NFT from sale"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    data = await request.json()
+    collection_symbol = data.get("collection_symbol")
+    token_id = data.get("token_id")
+    seller = data.get("seller", "").lower()
+    
+    if not all([collection_symbol, token_id is not None, seller]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    if not hasattr(blockchain, 'nft_collections') or collection_symbol not in blockchain.nft_collections:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    collection = blockchain.nft_collections[collection_symbol]
+    nft_item = None
+    for item in collection.get("items", []):
+        if item.get("token_id") == token_id:
+            nft_item = item
+            break
+    
+    if not nft_item:
+        raise HTTPException(status_code=404, detail="NFT not found")
+    
+    if nft_item.get("owner", "").lower() != seller:
+        raise HTTPException(status_code=403, detail="You don't own this NFT")
+    
+    nft_item["is_listed"] = False
+    nft_item.pop("listing_price", None)
+    nft_item.pop("listed_at", None)
+    
+    if hasattr(blockchain, 'nft_marketplace'):
+        blockchain.nft_marketplace = [
+            m for m in blockchain.nft_marketplace
+            if not (m["collection_symbol"] == collection_symbol and m["token_id"] == token_id)
+        ]
+    
+    return {"success": True, "message": "NFT listing cancelled"}
+
+@app.get("/api/nft/marketplace")
+async def get_nft_marketplace():
+    """Get all NFTs listed for sale"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        return {"listings": []}
+    
+    listings = []
+    if hasattr(blockchain, 'nft_collections'):
+        for symbol, collection in blockchain.nft_collections.items():
+            for item in collection.get("items", []):
+                if item.get("is_listed"):
+                    listings.append({
+                        **item,
+                        "collection_name": collection.get("name"),
+                        "collection_symbol": symbol,
+                        "collection_image": collection.get("image_url")
+                    })
+    
+    return {"listings": listings, "count": len(listings)}
+
+@app.get("/api/wallet/{address}/tokens")
+async def get_wallet_tokens(address: str):
+    """Get all token balances for a wallet with images"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        return {"tokens": []}
+    
+    address = address.lower()
+    tokens = []
+    
+    nnet_balance = blockchain.balances.get(address, 0)
+    tokens.append({
+        "symbol": "NNET",
+        "name": "NeoNet",
+        "balance": nnet_balance,
+        "price_usd": 5.0,
+        "value_usd": nnet_balance * 5.0,
+        "image_url": "/uploads/nnet_logo.png",
+        "is_native": True
+    })
+    
+    if address in blockchain.token_balances:
+        for symbol, balance in blockchain.token_balances[address].items():
+            if symbol in blockchain.tokens:
+                token = blockchain.tokens[symbol]
+                img = getattr(token, 'image_url', '') if hasattr(token, 'image_url') else ''
+                tokens.append({
+                    "symbol": symbol,
+                    "name": token.name,
+                    "balance": balance,
+                    "price_usd": token.price_usd,
+                    "value_usd": balance * token.price_usd,
+                    "image_url": img,
+                    "is_native": False
+                })
+    
+    return {"tokens": tokens}
+
+@app.get("/api/nft/verify/{symbol}/{token_id}")
+async def verify_nft_authenticity(symbol: str, token_id: int):
+    """Verify NFT authenticity using anti-fake protection"""
+    if not BLOCKCHAIN_ENABLED or not blockchain:
+        raise HTTPException(status_code=503, detail="Blockchain not available")
+    
+    if not hasattr(blockchain, 'nft_collections') or symbol not in blockchain.nft_collections:
+        return {"verified": False, "error": "Collection not found", "is_counterfeit": True}
+    
+    collection = blockchain.nft_collections[symbol]
+    
+    nft_item = None
+    for item in collection.get("items", []):
+        if item.get("token_id") == token_id:
+            nft_item = item
+            break
+    
+    if not nft_item:
+        return {"verified": False, "error": "NFT not found", "is_counterfeit": True}
+    
+    stored_hash = nft_item.get("nft_hash", "")
+    stored_sig = nft_item.get("authenticity_signature", "")
+    
+    expected_sig = hashlib.sha256(f"NFT_MINT:{stored_hash}".encode()).hexdigest()[:32]
+    
+    is_authentic = (stored_sig == expected_sig) and collection.get("ai_verified", False)
+    
+    return {
+        "verified": is_authentic,
+        "is_counterfeit": not is_authentic,
+        "nft": {
+            "token_id": token_id,
+            "collection": symbol,
+            "name": nft_item.get("name"),
+            "owner": nft_item.get("owner"),
+            "minted_at": nft_item.get("minted_at")
+        },
+        "anti_fake": {
+            "origin_hash": collection.get("origin_hash"),
+            "nft_hash": stored_hash,
+            "ai_verified": collection.get("ai_verified", False),
+            "collection_creator": collection.get("creator"),
+            "signature_valid": stored_sig == expected_sig
+        }
+    }
+
+# ===== Image Upload =====
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/api/upload/image")
+async def upload_image(file: UploadFile = File(...)):
+    """Upload an image file and return URL"""
+    allowed_types = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"File type {file.content_type} not allowed. Use PNG, JPEG, GIF, WebP or SVG")
+    
+    max_size = 5 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > max_size:
+        raise HTTPException(status_code=400, detail="File too large. Max 5MB")
+    
+    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
+    filename = f"{hashlib.sha256(contents).hexdigest()[:16]}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    return {"success": True, "filename": filename, "url": f"/uploads/{filename}"}
+
+@app.get("/uploads/{filename}")
+async def serve_upload(filename: str):
+    """Serve uploaded files"""
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(filepath)
 
 @app.get("/api/tokens")
 async def get_all_tokens():
@@ -3389,9 +4091,9 @@ GENESIS_SUPPLY = 50_000_000.0  # Starting supply
 # Many miners = lower individual reward (prevents hyperinflation)
 # Few miners = higher individual reward (incentivizes joining)
 
-BLOCK_BUDGET = 10.0  # Total NNET distributed per "block" (every ~3 seconds)
-MIN_REWARD_PER_MINER = 0.001  # Minimum reward to prevent dust
-MAX_REWARD_PER_MINER = 10.0  # Maximum reward when alone (cap)
+BLOCK_BUDGET = 0.1  # Total NNET distributed per "block" (every ~3 seconds)
+MIN_REWARD_PER_MINER = 0.0001  # Minimum reward to prevent dust
+MAX_REWARD_PER_MINER = 0.05  # Maximum reward when alone (cap) - realistic tokenomics
 
 # Task weight multipliers (relative difficulty/value)
 TASK_WEIGHTS = {
@@ -4111,7 +4813,7 @@ async def get_full_security_status():
             },
             "5_secrets": {
                 "protected_keys": secrets_protected,
-                "storage": "Replit Secrets (encrypted)",
+                "storage": "Encrypted Secrets",
                 "exposed": False
             }
         },

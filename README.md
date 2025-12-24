@@ -194,7 +194,6 @@ This protects against both classical and future quantum computer attacks.
 |---------|-----|
 | Main Website | https://neonetainetwork.com |
 | Documentation | https://neonetainetwork.info |
-| Community/DAO | https://neonetainetwork.org |
 | RPC Endpoint | https://rpc.neonetainetwork.com |
 | Block Explorer | https://explorer.neonetainetwork.com |
 

@@ -638,32 +638,55 @@ class NeoNetMiner:
         return base_reward + flops_bonus + time_bonus + gpu_bonus
     
     async def register_with_bootstrap(self):
-        """Register with bootstrap server"""
+        """Register with bootstrap server and start session"""
         try:
             async with aiohttp.ClientSession() as session:
-                endpoint = f"http://{self.config.wallet}:{self.config.port}"
+                # Step 1: Register as AI energy contributor
+                print(f"[Network] Connecting to {self.bootstrap_url}...")
                 
                 async with session.post(
-                    f"{self.bootstrap_url}/api/ai-energy/register",
+                    f"{self.bootstrap_url}/ai-energy/register",
                     json={
-                        "address": self.config.wallet,
-                        "endpoint": endpoint,
+                        "contributor_id": self.config.wallet,
+                        "wallet_address": self.config.wallet,
                         "cpu_cores": self.config.cpu_cores,
                         "gpu_memory_mb": self.config.gpu_memory_mb,
-                        "capabilities": ["fraud_detection", "model_training", "inference", "federated_learning"],
-                        "device": self.ai.device_name
+                        "gpu_model": self.ai.device_name
                     },
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
+                        print(f"[Network] Registered: {data.get('message', 'OK')}")
+                    elif resp.status == 422:
+                        print(f"[Network] Already registered, continuing...")
+                
+                # Step 2: Start session
+                async with session.post(
+                    f"{self.bootstrap_url}/ai-energy/start-session",
+                    json={"contributor_id": self.config.wallet},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
                         self.session_id = data.get("session_id")
-                        print(f"[Network] Registered with bootstrap server")
-                        print(f"[Network] Session ID: {self.session_id}")
+                        print(f"[Network] Session started: {self.session_id[:8]}...")
+                        
+                        initial_task = data.get("initial_task")
+                        if initial_task:
+                            print(f"[Network] Initial task received: {initial_task.get('task_type')}")
+                        
                         return True
+                    else:
+                        data = await resp.json()
+                        if "already active" in str(data):
+                            print(f"[Network] Session already active")
+                            self.session_id = data.get("session_id", "existing")
+                            return True
+                            
         except Exception as e:
-            print(f"[Network] Bootstrap registration failed: {e}")
-            print(f"[Network] Running in local P2P mode")
+            print(f"[Network] Bootstrap connection failed: {e}")
+            print(f"[Network] Running in standalone P2P mode")
         return False
     
     async def check_network_status(self):
@@ -695,6 +718,7 @@ class NeoNetMiner:
     
     async def fetch_task_from_network(self):
         """Get task from network (bootstrap or P2P peers)"""
+        # Try P2P peers first if in P2P mode
         if self.network_mode == "p2p" and self.p2p_peers:
             for peer in self.p2p_peers[:3]:
                 try:
@@ -708,21 +732,26 @@ class NeoNetMiner:
                 except:
                     continue
         
+        # Get task from bootstrap server
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.bootstrap_url}/api/tasks/next?address={self.config.wallet}",
+                    f"{self.bootstrap_url}/ai-energy/task/{self.config.wallet}",
                     timeout=aiohttp.ClientTimeout(total=5)
                 ) as resp:
                     if resp.status == 200:
-                        return await resp.json()
-        except:
+                        task = await resp.json()
+                        if task and task.get("task_id"):
+                            return task
+        except Exception as e:
             pass
         
+        # Fallback to local task generation
         return self._generate_local_task()
     
     async def submit_result_to_network(self, result: dict):
-        """Submit computation result to network"""
+        """Submit computation result to network and receive reward"""
+        # Try P2P peers first
         if self.network_mode == "p2p" and self.p2p_peers:
             for peer in self.p2p_peers[:3]:
                 try:
@@ -737,28 +766,37 @@ class NeoNetMiner:
                 except:
                     continue
         
+        # Submit to bootstrap server
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.bootstrap_url}/api/ai-energy/task/complete",
+                    f"{self.bootstrap_url}/ai-energy/submit-result",
                     json={
-                        "address": self.config.wallet,
+                        "contributor_id": self.config.wallet,
+                        "session_id": self.session_id or "local",
                         "task_id": result.get("task_id"),
-                        "result": result,
-                        "compute_proof": {
+                        "result": {
+                            "task_type": result.get("task_type"),
+                            "results_hash": result.get("results_hash", result.get("output_hash", "")),
+                            "weights_hash": result.get("weights_hash", ""),
+                            "gradient_hash": result.get("gradient_hash", ""),
+                            "output_hash": result.get("output_hash", ""),
+                            "blocks_validated": result.get("blocks_validated", 0),
+                            "integrity_score": result.get("integrity_score", 1.0),
                             "flops": result.get("flops", 0),
-                            "device": self.ai.device_name,
-                            "weights_hash": result.get("weights_hash", result.get("model_hash", "")),
-                            "gradient_hash": result.get("gradient_hash", "")
+                            "compute_time_ms": result.get("compute_time_ms", 0),
+                            "device": self.ai.device_name
                         }
                     },
-                    timeout=aiohttp.ClientTimeout(total=5)
+                    timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
                     if resp.status == 200:
-                        return await resp.json()
-        except:
+                        data = await resp.json()
+                        return data
+        except Exception as e:
             pass
         
+        # Fallback: calculate local reward
         return {"success": True, "reward": self._calculate_reward(result)}
     
     async def mining_loop(self):
@@ -792,27 +830,36 @@ class NeoNetMiner:
                 await asyncio.sleep(5)
     
     async def heartbeat_loop(self):
-        """Send heartbeat to network"""
+        """Send heartbeat to network - keeps session alive and earns rewards"""
         while self.is_running:
             try:
-                if self.network_mode != "p2p":
+                if self.network_mode != "p2p" and self.session_id:
                     async with aiohttp.ClientSession() as session:
                         stats = self.ai.get_compute_stats()
                         async with session.post(
-                            f"{self.bootstrap_url}/api/ai-energy/heartbeat",
+                            f"{self.bootstrap_url}/ai-energy/heartbeat",
                             json={
-                                "address": self.config.wallet,
+                                "contributor_id": self.config.wallet,
                                 "session_id": self.session_id,
+                                "cpu_usage": 50.0,
+                                "gpu_usage": 70.0 if "cuda" in self.ai.device.lower() else 0.0,
                                 "tasks_completed": stats["tasks_processed"],
-                                "total_flops": stats["total_flops"],
-                                "device": self.ai.device_name
+                                "total_flops": stats["total_flops"]
                             },
                             timeout=aiohttp.ClientTimeout(total=5)
                         ) as resp:
                             if resp.status == 200:
                                 data = await resp.json()
-                                self.active_miners_count = data.get("active_miners", 0)
-            except:
+                                heartbeat_reward = data.get("reward", 0)
+                                if heartbeat_reward > 0:
+                                    self.rewards_earned += heartbeat_reward
+                                self.active_miners_count = data.get("active_providers", 0)
+                                
+                                # Check for decentralization
+                                if self.active_miners_count >= 1000:
+                                    print(f"[Network] 1000+ miners active - switching to P2P mode")
+                                    self.network_mode = "p2p"
+            except Exception as e:
                 pass
             
             await asyncio.sleep(30)

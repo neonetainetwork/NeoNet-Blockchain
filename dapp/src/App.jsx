@@ -23,9 +23,8 @@ function ExploreTab({ wallet }) {
   const [exploreData, setExploreData] = useState({
     tokens: [],
     dapps: [],
-    nft_collections: [],
     contracts: [],
-    stats: { total_tokens: 0, total_dapps: 0, total_nfts: 0, total_contracts: 0 }
+    stats: { total_tokens: 0, total_dapps: 0, total_contracts: 0 }
   });
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -56,9 +55,6 @@ function ExploreTab({ wallet }) {
     if (activeCategory === 'all' || activeCategory === 'dapps') {
       items.push(...exploreData.dapps.map(d => ({ ...d, itemType: 'dapp' })));
     }
-    if (activeCategory === 'all' || activeCategory === 'nfts') {
-      items.push(...exploreData.nft_collections.map(n => ({ ...n, itemType: 'nft' })));
-    }
     
     if (searchTerm) {
       items = items.filter(item => 
@@ -73,7 +69,6 @@ function ExploreTab({ wallet }) {
 
   const getCategoryIcon = (item) => {
     if (item.itemType === 'token') return '🪙';
-    if (item.itemType === 'nft') return '🎨';
     if (item.itemType === 'dapp') {
       if (item.category === 'defi') return '💹';
       if (item.category === 'gaming') return '🎮';
@@ -93,10 +88,10 @@ function ExploreTab({ wallet }) {
     <div>
       <h1 style={styles.title}>Explore NeoNet Ecosystem</h1>
       <p style={{color: '#888', textAlign: 'center', marginBottom: '30px'}}>
-        Discover tokens, dApps, NFT collections and smart contracts deployed on NeoNet
+        Discover tokens, dApps and smart contracts deployed on NeoNet
       </p>
 
-      <div className="explore-stats-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px'}}>
+      <div className="explore-stats-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '30px'}}>
         <div className="card" style={{...styles.card, textAlign: 'center', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', border: '1px solid #f7931a'}}>
           <div className="card-value" style={{fontSize: '32px', fontWeight: 'bold', color: '#f7931a'}}>{exploreData.stats?.total_tokens || 0}</div>
           <div style={{color: '#888'}}>Tokens</div>
@@ -105,10 +100,6 @@ function ExploreTab({ wallet }) {
           <div className="card-value" style={{fontSize: '32px', fontWeight: 'bold', color: '#4CAF50'}}>{exploreData.stats?.total_dapps || 0}</div>
           <div style={{color: '#888'}}>dApps</div>
         </div>
-        <div className="card" style={{...styles.card, textAlign: 'center', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', border: '1px solid #9c27b0'}}>
-          <div className="card-value" style={{fontSize: '32px', fontWeight: 'bold', color: '#9c27b0'}}>{exploreData.stats?.total_nfts || 0}</div>
-          <div style={{color: '#888'}}>NFT Collections</div>
-        </div>
         <div className="card" style={{...styles.card, textAlign: 'center', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', border: '1px solid #2196F3'}}>
           <div className="card-value" style={{fontSize: '32px', fontWeight: 'bold', color: '#2196F3'}}>{exploreData.stats?.total_contracts || 0}</div>
           <div style={{color: '#888'}}>Contracts</div>
@@ -116,14 +107,14 @@ function ExploreTab({ wallet }) {
       </div>
 
       <div className="category-tabs" style={{display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap'}}>
-        {['all', 'tokens', 'dapps', 'nfts'].map(cat => (
+        {['all', 'tokens', 'dapps'].map(cat => (
           <button 
             key={cat} 
             onClick={() => setActiveCategory(cat)}
             style={activeCategory === cat ? styles.tabActive : styles.tab}
             className="tab"
           >
-            {cat === 'all' ? 'All Projects' : cat === 'nfts' ? 'NFTs' : cat === 'dapps' ? 'dApps' : 'Tokens'}
+            {cat === 'all' ? 'All Projects' : cat === 'dapps' ? 'dApps' : 'Tokens'}
           </button>
         ))}
       </div>
@@ -169,10 +160,10 @@ function ExploreTab({ wallet }) {
                     padding: '2px 8px',
                     borderRadius: '10px',
                     fontSize: '12px',
-                    background: item.itemType === 'token' ? '#f7931a' : item.itemType === 'nft' ? '#9c27b0' : '#4CAF50',
+                    background: item.itemType === 'token' ? '#f7931a' : '#4CAF50',
                     color: '#fff'
                   }}>
-                    {item.itemType === 'token' ? 'Token' : item.itemType === 'nft' ? 'NFT' : 'dApp'}
+                    {item.itemType === 'token' ? 'Token' : 'dApp'}
                   </span>
                   {item.category && (
                     <span style={{marginLeft: '5px', fontSize: '12px', color: '#888'}}>
@@ -208,22 +199,6 @@ function ExploreTab({ wallet }) {
                 )}
                 {item.floor_price_neo !== undefined && (
                   <div><span style={{color: '#888'}}>Floor:</span> <strong>{item.floor_price_neo} NNET</strong></div>
-                )}
-                {item.remaining !== undefined && item.itemType === 'nft' && (
-                  <div><span style={{color: '#888'}}>Available:</span> <strong style={{color: item.remaining <= 5 ? '#f44336' : '#4CAF50'}}>{item.remaining}/{item.total_supply}</strong></div>
-                )}
-                {item.creator && item.itemType === 'nft' && (
-                  <div style={{gridColumn: '1 / -1'}}>
-                    <span style={{color: '#888'}}>Creator:</span>{' '}
-                    <strong 
-                      style={{color: '#58a6ff', cursor: 'pointer', fontSize: '12px'}} 
-                      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.creator); alert('Creator address copied!\n\n' + item.creator); }}
-                      title={item.creator}
-                    >
-                      {item.creator?.slice(0, 12)}...{item.creator?.slice(-8)}
-                    </strong>
-                    {item.ai_verified && <span style={{marginLeft: '6px', color: '#4CAF50', fontSize: '11px'}}>✓ AI Verified</span>}
-                  </div>
                 )}
                 {item.users_count !== undefined && (
                   <div><span style={{color: '#888'}}>Users:</span> <strong>{item.users_count}</strong></div>
@@ -269,44 +244,6 @@ function ExploreTab({ wallet }) {
                         style={{...styles.button, padding: '6px 12px', fontSize: '12px', background: '#2196F3'}}
                       >
                         ℹ️ Info
-                      </button>
-                    </>
-                  )}
-                  {item.itemType === 'nft' && (
-                    <>
-                      <button 
-                        onClick={async (e) => { 
-                          e.stopPropagation(); 
-                          const walletAddress = wallet?.addresses?.neoAddress || wallet?.quantumAddress;
-                          if (!wallet || !wallet.isConnected || !walletAddress) {
-                            alert('Please connect wallet first');
-                            return;
-                          }
-                          const remaining = item.remaining !== undefined ? item.remaining : (item.total_supply - (item.minted || 0));
-                          if (remaining <= 0) {
-                            alert('This collection is SOLD OUT!');
-                            return;
-                          }
-                          if (confirm(`Buy NFT from "${item.name}" for ${item.floor_price_neo || 0} NNET?\n\nAvailable: ${remaining}/${item.total_supply}\nYour wallet: ${walletAddress?.slice(0,20)}...`)) {
-                            try {
-                              const res = await axios.post(`${API}/nft/${item.symbol}/buy`, { buyer: walletAddress });
-                              const status = res.data.collection_status;
-                              alert(`Success! You purchased ${res.data.nft?.name}\n\nNFT Hash: ${res.data.nft?.nft_hash?.slice(0,16)}...\n${status?.is_sold_out ? '🔥 SOLD OUT!' : `Remaining: ${status?.remaining}/${status?.total_supply}`}`);
-                              loadExploreData();
-                            } catch (err) {
-                              alert('Purchase failed: ' + (err.response?.data?.detail || err.message));
-                            }
-                          }
-                        }}
-                        style={{...styles.button, padding: '6px 12px', fontSize: '12px', background: '#f7931a'}}
-                      >
-                        🛒 Buy ({item.floor_price_neo || 0} NNET)
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); alert(`NFT Collection:\n\nName: ${item.name}\nSymbol: ${item.symbol}\nAvailable: ${item.remaining !== undefined ? item.remaining : '?'}/${item.total_supply}\nMinted: ${item.minted || 0}\nFloor Price: ${item.floor_price_neo || 0} NNET\nCategory: ${item.category}\n\n👤 CREATOR WALLET:\n${item.creator || 'Unknown'}\n\n🔐 VERIFICATION:\nAI Verified: ${item.ai_verified ? '✓ Yes' : '✗ No'}\nOrigin Hash: ${item.origin_hash || 'N/A'}\nContract: ${item.contract_address}`); }}
-                        style={{...styles.button, padding: '6px 12px', fontSize: '12px', background: '#2196F3'}}
-                      >
-                        👁️ View
                       </button>
                     </>
                   )}
@@ -467,326 +404,6 @@ function TokenFactoryForm({ wallet }) {
   );
 }
 
-function NFTFactoryForm({ wallet }) {
-  const [nftData, setNftData] = useState({
-    name: '',
-    symbol: '',
-    totalSupply: '100',
-    category: 'art',
-    floorPrice: '0.1',
-    description: '',
-    imageUrl: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await axios.post(`${API}/upload/image`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setNftData({...nftData, imageUrl: res.data.url});
-    } catch (e) {
-      alert('Upload failed: ' + (e.response?.data?.detail || e.message));
-    }
-    setUploading(false);
-  };
-
-  const createNFT = async () => {
-    if (!nftData.name || !nftData.symbol || !nftData.totalSupply) {
-      return alert('Please fill in name, symbol and total supply');
-    }
-    
-    setLoading(true);
-    try {
-      const res = await axios.post(`${API}/nft/create`, {
-        name: nftData.name,
-        symbol: nftData.symbol.toUpperCase(),
-        total_supply: parseInt(nftData.totalSupply),
-        creator: wallet.evmAddress,
-        category: nftData.category,
-        floor_price: parseFloat(nftData.floorPrice),
-        description: nftData.description,
-        image_url: nftData.imageUrl
-      });
-      setResult(res.data);
-      alert(`NFT Collection ${nftData.name} created successfully!`);
-    } catch (e) {
-      alert('Error: ' + (e.response?.data?.detail || e.message));
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
-        <div style={styles.formGroup}>
-          <label>Collection Name *</label>
-          <input 
-            placeholder="Cool NFT Collection" 
-            value={nftData.name}
-            onChange={e => setNftData({...nftData, name: e.target.value})}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Symbol * (3-5 chars)</label>
-          <input 
-            placeholder="COOL" 
-            maxLength={5}
-            value={nftData.symbol}
-            onChange={e => setNftData({...nftData, symbol: e.target.value.toUpperCase()})}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Total Supply (max items)</label>
-          <input 
-            type="number"
-            placeholder="100" 
-            value={nftData.totalSupply}
-            onChange={e => setNftData({...nftData, totalSupply: e.target.value})}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Category</label>
-          <select 
-            value={nftData.category}
-            onChange={e => setNftData({...nftData, category: e.target.value})}
-            style={styles.input}
-          >
-            <option value="art">Art</option>
-            <option value="gaming">Gaming</option>
-            <option value="music">Music</option>
-            <option value="collectibles">Collectibles</option>
-            <option value="photography">Photography</option>
-          </select>
-        </div>
-        <div style={styles.formGroup}>
-          <label>Floor Price (NNET)</label>
-          <input 
-            type="number"
-            step="0.01"
-            placeholder="0.1" 
-            value={nftData.floorPrice}
-            onChange={e => setNftData({...nftData, floorPrice: e.target.value})}
-            style={styles.input}
-          />
-        </div>
-      </div>
-      <div style={styles.formGroup}>
-        <label>Collection Image</label>
-        <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
-          <label style={{...styles.btn, background: '#333', cursor: 'pointer', display: 'inline-block'}}>
-            {uploading ? 'Uploading...' : 'Upload Image'}
-            <input type="file" accept="image/*" onChange={handleFileUpload} style={{display: 'none'}} disabled={uploading} />
-          </label>
-          <span style={{color: '#888'}}>or</span>
-          <input 
-            placeholder="Paste URL" 
-            value={nftData.imageUrl}
-            onChange={e => setNftData({...nftData, imageUrl: e.target.value})}
-            style={{...styles.input, flex: 1}}
-          />
-        </div>
-        {nftData.imageUrl && (
-          <div style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <img src={nftData.imageUrl} alt="NFT preview" style={{width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover'}} onError={e => e.target.style.display='none'} />
-            <button onClick={() => setNftData({...nftData, imageUrl: ''})} style={{...styles.btn, background: '#f44336', padding: '5px 10px'}}>Remove</button>
-          </div>
-        )}
-      </div>
-      <div style={styles.formGroup}>
-        <label>Description</label>
-        <textarea 
-          placeholder="Describe your NFT collection..." 
-          value={nftData.description}
-          onChange={e => setNftData({...nftData, description: e.target.value})}
-          style={{...styles.input, minHeight: '60px'}}
-        />
-      </div>
-      <button onClick={createNFT} disabled={loading} style={{...styles.btn, background: '#9c27b0', width: '100%'}}>
-        {loading ? 'Creating Collection...' : 'Create NFT Collection'}
-      </button>
-      {result && (
-        <div style={{marginTop: '15px', padding: '15px', background: '#1a1a2e', borderRadius: '8px', border: '1px solid #9c27b0'}}>
-          <p style={{color: '#9c27b0', fontWeight: 'bold'}}>NFT Collection Created!</p>
-          <p><strong>Name:</strong> {result.collection?.name}</p>
-          <p><strong>Contract:</strong> {result.collection?.contract_address}</p>
-          <p style={{fontSize: '12px', color: '#888'}}>Your collection is now available in Explore!</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WalletNFTSection({ wallet }) {
-  const [nfts, setNfts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [listingPrice, setListingPrice] = useState('');
-  const [selectedNft, setSelectedNft] = useState(null);
-
-  const walletAddress = wallet?.addresses?.neoAddress || wallet?.quantumAddress;
-
-  useEffect(() => {
-    if (walletAddress) {
-      loadNFTs();
-    }
-  }, [walletAddress]);
-
-  const loadNFTs = async () => {
-    if (!walletAddress) return;
-    try {
-      const res = await axios.get(`${API}/wallet/${walletAddress}/nfts`);
-      setNfts(res.data?.nfts || []);
-    } catch (e) {
-      console.error('Failed to load NFTs:', e);
-    }
-    setLoading(false);
-  };
-
-  const listForSale = async (nft) => {
-    if (!listingPrice || parseFloat(listingPrice) <= 0) {
-      alert('Please enter a valid price');
-      return;
-    }
-    try {
-      const res = await axios.post(`${API}/nft/list`, {
-        collection_symbol: nft.collection_symbol,
-        token_id: nft.token_id,
-        price: parseFloat(listingPrice),
-        seller: walletAddress
-      });
-      alert(`NFT listed for sale at ${listingPrice} NNET!`);
-      setSelectedNft(null);
-      setListingPrice('');
-      loadNFTs();
-    } catch (e) {
-      alert('Failed to list: ' + (e.response?.data?.detail || e.message));
-    }
-  };
-
-  const cancelListing = async (nft) => {
-    try {
-      await axios.post(`${API}/nft/unlist`, {
-        collection_symbol: nft.collection_symbol,
-        token_id: nft.token_id,
-        seller: walletAddress
-      });
-      alert('Listing cancelled');
-      loadNFTs();
-    } catch (e) {
-      alert('Failed: ' + (e.response?.data?.detail || e.message));
-    }
-  };
-
-  if (!walletAddress || !wallet?.isConnected) return null;
-
-  return (
-    <div style={styles.card}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-        <div style={styles.cardLabel}>🎨 My NFTs ({nfts.length})</div>
-        <button onClick={loadNFTs} style={{...styles.btn, padding: '5px 10px', fontSize: '12px', background: '#333'}}>
-          🔄 Refresh
-        </button>
-      </div>
-      
-      {loading ? (
-        <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>Loading NFTs...</div>
-      ) : nfts.length === 0 ? (
-        <div style={{textAlign: 'center', padding: '20px', color: '#888'}}>
-          <p>No NFTs yet</p>
-          <p style={{fontSize: '12px'}}>Buy NFTs from Explore tab or create your own collection</p>
-        </div>
-      ) : (
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px'}}>
-          {nfts.map((nft, i) => (
-            <div key={i} style={{background: '#0d1117', borderRadius: '12px', overflow: 'hidden', border: nft.is_listed ? '2px solid #f7931a' : '1px solid #30363d'}}>
-              {(nft.image_url || nft.collection_image) && (
-                <img 
-                  src={nft.image_url || nft.collection_image} 
-                  alt={nft.name} 
-                  style={{width: '100%', height: '120px', objectFit: 'cover'}}
-                  onError={e => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%239c27b0" width="100" height="100"/><text x="50" y="55" font-size="40" text-anchor="middle" fill="white">NFT</text></svg>'}
-                />
-              )}
-              <div style={{padding: '10px'}}>
-                <div style={{fontWeight: 'bold', fontSize: '13px', marginBottom: '4px'}}>{nft.name}</div>
-                <div style={{fontSize: '11px', color: '#888'}}>{nft.collection_name}</div>
-                {nft.verified && (
-                  <div style={{fontSize: '10px', color: '#4CAF50', marginTop: '4px'}}>✓ Verified</div>
-                )}
-                {nft.price_paid && (
-                  <div style={{fontSize: '10px', color: '#8b949e', marginTop: '2px'}}>Paid: {nft.price_paid} NNET</div>
-                )}
-                {nft.is_listed && (
-                  <div style={{fontSize: '11px', color: '#f7931a', marginTop: '4px', fontWeight: 'bold'}}>📢 Listed: {nft.listing_price} NNET</div>
-                )}
-                
-                <div style={{marginTop: '8px', display: 'flex', gap: '4px', flexWrap: 'wrap'}}>
-                  {nft.is_listed ? (
-                    <button 
-                      onClick={() => cancelListing(nft)}
-                      style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#f44336', flex: 1}}
-                    >
-                      Cancel Listing
-                    </button>
-                  ) : selectedNft?.token_id === nft.token_id && selectedNft?.collection_symbol === nft.collection_symbol ? (
-                    <div style={{width: '100%'}}>
-                      <input 
-                        type="number" 
-                        placeholder="Price in NNET" 
-                        value={listingPrice}
-                        onChange={e => setListingPrice(e.target.value)}
-                        style={{...styles.input, padding: '6px', fontSize: '11px', marginBottom: '4px'}}
-                      />
-                      <div style={{display: 'flex', gap: '4px'}}>
-                        <button 
-                          onClick={() => listForSale(nft)}
-                          style={{...styles.btn, padding: '4px 6px', fontSize: '10px', background: '#4CAF50', flex: 1}}
-                        >
-                          Confirm
-                        </button>
-                        <button 
-                          onClick={() => { setSelectedNft(null); setListingPrice(''); }}
-                          style={{...styles.btn, padding: '4px 6px', fontSize: '10px', background: '#666', flex: 1}}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => setSelectedNft(nft)}
-                      style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#f7931a', flex: 1}}
-                    >
-                      🏷️ Sell
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => alert(`NFT Details:\n\nName: ${nft.name}\nCollection: ${nft.collection_name}\nToken ID: ${nft.token_id}\nHash: ${nft.nft_hash}\nMinted: ${new Date(nft.minted_at * 1000).toLocaleDateString()}`)}
-                    style={{...styles.btn, padding: '4px 8px', fontSize: '10px', background: '#2196F3', flex: 1}}
-                  >
-                    ℹ️ Info
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DeveloperTab({ wallet, setShowWallet }) {
   const [contractCode, setContractCode] = useState('');
   const [runtime, setRuntime] = useState('hybrid');
@@ -887,9 +504,6 @@ function DeveloperTab({ wallet, setShowWallet }) {
       if (res.data.dapp) {
         message += `\n\ndApp auto-registered: ${res.data.dapp.name} (${res.data.dapp.category})`;
       }
-      if (res.data.nft) {
-        message += `\n\nNFT Collection auto-registered: ${res.data.nft.name}`;
-      }
       
       alert(message);
       setContractMetadata({ name: '', symbol: '', totalSupply: '', description: '', category: 'utility', isDapp: false, websiteUrl: '' });
@@ -952,35 +566,15 @@ function DeveloperTab({ wallet, setShowWallet }) {
         </div>
       )}
 
-      {/* Quick Token/NFT Factory */}
+      {/* Quick Token Factory */}
       <div style={{...styles.card, background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)', border: '1px solid #f7931a', marginBottom: '20px'}}>
-        <h3 style={{color: '#f7931a', marginBottom: '15px'}}>Quick Token & NFT Factory (No Code Required)</h3>
-        <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
-          <button 
-            onClick={() => setShowExamples('token_factory')} 
-            style={showExamples === 'token_factory' ? {...styles.tabActive, background: '#f7931a'} : styles.tab}
-          >
-            Create Token
-          </button>
-          <button 
-            onClick={() => setShowExamples('nft_factory')} 
-            style={showExamples === 'nft_factory' ? {...styles.tabActive, background: '#9c27b0'} : styles.tab}
-          >
-            Create NFT Collection
-          </button>
-        </div>
+        <h3 style={{color: '#f7931a', marginBottom: '15px'}}>Quick Token Factory (No Code Required)</h3>
         
-        {showExamples === 'token_factory' && wallet.isConnected && (
+        {wallet.isConnected ? (
           <TokenFactoryForm wallet={wallet} />
-        )}
-        
-        {showExamples === 'nft_factory' && wallet.isConnected && (
-          <NFTFactoryForm wallet={wallet} />
-        )}
-        
-        {(showExamples === 'token_factory' || showExamples === 'nft_factory') && !wallet.isConnected && (
+        ) : (
           <div style={{textAlign: 'center', padding: '20px'}}>
-            <p style={{color: '#888'}}>Connect wallet to create tokens and NFTs</p>
+            <p style={{color: '#888'}}>Connect wallet to create tokens</p>
             <button onClick={() => setShowWallet(true)} style={styles.btn}>Connect Wallet</button>
           </div>
         )}
@@ -1209,7 +803,7 @@ contract HybridAiVoting {
         <>
           <div style={styles.card}>
             <h3>Deploy Smart Contract to NeoNet</h3>
-            <p>Deploy using NeoNet's unified EVM+WASM runtime. Tokens, NFTs and dApps are auto-registered to the network!</p>
+            <p>Deploy using NeoNet's unified EVM+WASM runtime. Tokens and dApps are auto-registered to the network!</p>
             <div style={styles.formGroup}>
               <label>Runtime</label>
               <select value={runtime} onChange={e => setRuntime(e.target.value)} style={styles.input}>
@@ -1276,7 +870,6 @@ contract HybridAiVoting {
                     <option value="gaming">Gaming</option>
                     <option value="dao">DAO</option>
                     <option value="social">Social</option>
-                    <option value="nft">NFT</option>
                   </select>
                 </div>
               </div>
@@ -2746,7 +2339,6 @@ function AppContent() {
                   </div>
                 )}
 
-                <WalletNFTSection wallet={wallet} />
               </>
             )}
           </div>

@@ -210,8 +210,8 @@ MIT License - See LICENSE file for details.
 
 ## Community
 
-- GitHub (Public): https://github.com/neonetainetwork/neonet-public
-- Discussions: https://github.com/neonetainetwork/neonet-public/discussions
+- GitHub (Public): https://github.com/neonetainetwork/NeoNet-Blockchain
+- Discussions: https://github.com/neonetainetwork/NeoNet-Blockchain/discussions
 - Documentation: https://neonetainetwork.info
 - Discord: Coming soon
 - Twitter: Coming soon
@@ -220,8 +220,8 @@ MIT License - See LICENSE file for details.
 
 Download the miner client from our public repository:
 ```bash
-git clone https://github.com/neonetainetwork/neonet-public.git
-cd neonet-public/miner-client
+git clone https://github.com/neonetainetwork/NeoNet-Blockchain.git
+cd NeoNet-Blockchain/miner-client
 pip install aiohttp numpy
 python neonet_miner.py --wallet neo1yourwallet --server https://neonetainetwork.com
 ```

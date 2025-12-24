@@ -1009,12 +1009,12 @@ class ProgressiveDecentralization:
         
         print(f"[NeoNet] AUTOMATIC SHUTDOWN INITIATED")
         print(f"[NeoNet] Network is fully decentralized with {active_miners} miners")
-        print(f"[NeoNet] Replit server will shutdown in {self.shutdown_grace_period} seconds")
+        print(f"[NeoNet] Bootstrap server will shutdown in {self.shutdown_grace_period} seconds")
         print(f"[NeoNet] All operations will continue on P2P network")
         
         def graceful_shutdown():
             time.sleep(self.shutdown_grace_period)
-            print("[NeoNet] Replit bootstrap server shutting down... Network continues on P2P")
+            print("[NeoNet] Bootstrap server shutting down... Network continues on P2P")
             os.kill(os.getpid(), signal.SIGTERM)
         
         import threading

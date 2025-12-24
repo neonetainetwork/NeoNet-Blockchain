@@ -214,7 +214,7 @@ MIT License - See LICENSE file for details.
 - Discussions: https://github.com/neonetainetwork/NeoNet-Blockchain/discussions
 - Documentation: https://neonetainetwork.info
 - Discord: https://discord.gg/WFam75M8
-- Twitter: Coming soon
+- Twitter: https://x.com/NeoNetainetwork
 
 ## Miner Downloads
 

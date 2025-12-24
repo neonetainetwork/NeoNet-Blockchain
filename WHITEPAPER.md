@@ -739,8 +739,9 @@ Join the Web4 revolution. Provide your computing power. Earn NNET.
 - Website: https://neonetainetwork.com
 - Documentation: https://neonetainetwork.info
 - Community: https://neonetainetwork.org
-- GitHub (Public): https://github.com/neonetainetwork/neonet-public
-- Discussions: https://github.com/neonetainetwork/neonet-public/discussions
+- GitHub: https://github.com/neonetainetwork/NeoNet-Blockchain
+- Discussions: https://github.com/neonetainetwork/NeoNet-Blockchain/discussions
+- Issues: https://github.com/neonetainetwork/NeoNet-Blockchain/issues
 
 ---
 

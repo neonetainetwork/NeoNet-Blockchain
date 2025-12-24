@@ -11,7 +11,7 @@ NeoNet is a revolutionary Web4 blockchain platform featuring:
 - **AI Energy Mining** - Earn up to 1.00 NNET per task (10x rewards!)
 - **Web4 Wallet** - Dual keys: EVM (0x...) + Quantum (neo1...)
 - **DualGov Governance** - AI voting (30%) + DAO voting (70%)
-- **Progressive Decentralization** - Network transitions from Replit to miners automatically
+- **Progressive Decentralization** - Network transitions from bootstrap server to miners automatically
 - **Smart Throttling** - Adaptive DDoS protection (gas adjustment, not blocking)
 - **AI Cannot Be Hacked** - Multi-layer security prevents all attack vectors
 
@@ -210,6 +210,18 @@ MIT License - See LICENSE file for details.
 
 ## Community
 
-- GitHub: https://github.com/neonetainetwork
+- GitHub (Public): https://github.com/neonetainetwork/neonet-public
+- Discussions: https://github.com/neonetainetwork/neonet-public/discussions
+- Documentation: https://neonetainetwork.info
 - Discord: Coming soon
 - Twitter: Coming soon
+
+## Miner Downloads
+
+Download the miner client from our public repository:
+```bash
+git clone https://github.com/neonetainetwork/neonet-public.git
+cd neonet-public/miner-client
+pip install aiohttp numpy
+python neonet_miner.py --wallet neo1yourwallet --server https://neonetainetwork.com
+```

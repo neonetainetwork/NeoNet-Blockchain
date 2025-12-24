@@ -340,7 +340,7 @@ class NeoNetFullNode:
                                     self.peers.add(endpoint)
                             # Show decentralization progress
                             phase = data.get("phase", "bootstrap")
-                            bootstrap_load = data.get("bootstrap_load", data.get("replit_load", 100))
+                            bootstrap_load = data.get("bootstrap_load", 100)
                             miner_load = data.get("miner_load", 0)
                             if phase != "bootstrap":
                                 print(f"[P2P] Network phase: {phase.upper()}")

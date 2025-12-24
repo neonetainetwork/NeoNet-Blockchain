@@ -246,8 +246,9 @@ sudo systemctl start neonet-miner
 
 - Website: https://neonetainetwork.com
 - Documentation: https://neonetainetwork.info
-- GitHub (Public): https://github.com/neonetainetwork/neonet-public
-- Discussions: https://github.com/neonetainetwork/neonet-public/discussions
+- GitHub: https://github.com/neonetainetwork/NeoNet-Blockchain
+- Discussions: https://github.com/neonetainetwork/NeoNet-Blockchain/discussions
+- Issues: https://github.com/neonetainetwork/NeoNet-Blockchain/issues
 
 ## License
 

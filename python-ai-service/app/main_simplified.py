@@ -564,7 +564,7 @@ async def auto_save_blockchain():
                 if result.get("success"):
                     print(f"[StateDB] Synced: {result.get('synced_accounts', 0)} accounts, {result.get('synced_transactions', 0)} txs, {result.get('synced_ai_contributors', 0)} contributors, {result.get('synced_miners', 0)} miners")
             
-            # Check for automatic Replit shutdown when fully decentralized
+            # Check for automatic bootstrap shutdown when fully decentralized
             if AI_MINER_ENABLED and progressive_decentralization and ai_miner:
                 active_miners = ai_miner.stats.get("active_miners", 0)
                 shutdown_result = progressive_decentralization.check_auto_shutdown(active_miners)

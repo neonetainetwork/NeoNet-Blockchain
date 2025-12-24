@@ -899,18 +899,18 @@ class ProgressiveDecentralization:
     """
     Progressive Decentralization System (Protocol NeoNet Genesis)
     
-    Manages the transition from Replit bootstrap to fully decentralized network.
-    As miners join, the network gradually shifts load from Replit to miners.
+    Manages the transition from bootstrap server to fully decentralized network.
+    As miners join, the network gradually shifts load from bootstrap to miners.
     
     Phases:
-    - Bootstrap (0-10 miners): Replit handles 100%
+    - Bootstrap (0-10 miners): Bootstrap handles 100%
     - Transition (10-100 miners): Mixed 50/50
     - Distributed (100-1000 miners): Miners handle 90%
-    - Decentralized (1000+ miners): Miners handle 100%, Replit can shutdown
+    - Decentralized (1000+ miners): Miners handle 100%, bootstrap can shutdown
     """
     
     def __init__(self):
-        self.replit_load_percentage = 100.0
+        self.bootstrap_load_percentage = 100.0
         self.miner_load_percentage = 0.0
         self.phase = "bootstrap"
         self.transition_started_at = None
@@ -918,7 +918,11 @@ class ProgressiveDecentralization:
         self.state_replicated_to_miners = 0
         self.models_distributed_to_miners = 0
         self.consensus_on_miners = False
-        self.replit_shutdown_ready = False
+        self.bootstrap_shutdown_ready = False
+        self.auto_shutdown_enabled = True
+        self.shutdown_initiated = False
+        self.shutdown_grace_period = 60
+        self.min_stable_time_before_shutdown = 300
         
         self.miner_capabilities: Dict[str, Dict] = {}
         self.miner_state_sync: Dict[str, Dict] = {}
@@ -934,7 +938,7 @@ class ProgressiveDecentralization:
         """
         if active_miners < 10:
             self.phase = "bootstrap"
-            self.replit_load_percentage = 100.0
+            self.bootstrap_load_percentage = 100.0
             self.miner_load_percentage = 0.0
         elif active_miners < 100:
             self.phase = "transition"
@@ -942,28 +946,96 @@ class ProgressiveDecentralization:
                 self.transition_started_at = time.time()
             miner_share = ((active_miners - 10) / 90) * 50
             self.miner_load_percentage = miner_share
-            self.replit_load_percentage = 100 - miner_share
+            self.bootstrap_load_percentage = 100 - miner_share
         elif active_miners < 1000:
             self.phase = "distributed"
             miner_share = 50 + ((active_miners - 100) / 900) * 40
             self.miner_load_percentage = miner_share
-            self.replit_load_percentage = 100 - miner_share
+            self.bootstrap_load_percentage = 100 - miner_share
         else:
             self.phase = "decentralized"
             self.miner_load_percentage = 100.0
-            self.replit_load_percentage = 0.0
-            self.replit_shutdown_ready = True
+            self.bootstrap_load_percentage = 0.0
+            self.bootstrap_shutdown_ready = True
             if self.full_decentralization_at is None:
                 self.full_decentralization_at = time.time()
         
         return {
             "phase": self.phase,
             "active_miners": active_miners,
-            "replit_load": round(self.replit_load_percentage, 2),
+            "bootstrap_load": round(self.bootstrap_load_percentage, 2),
             "miner_load": round(self.miner_load_percentage, 2),
-            "replit_shutdown_ready": self.replit_shutdown_ready,
+            "bootstrap_shutdown_ready": self.bootstrap_shutdown_ready,
+            "auto_shutdown_enabled": self.auto_shutdown_enabled,
+            "shutdown_initiated": self.shutdown_initiated,
             "transition_started": self.transition_started_at,
             "full_decentralization": self.full_decentralization_at
+        }
+    
+    def check_auto_shutdown(self, active_miners: int) -> Dict:
+        """
+        Check if automatic shutdown should be triggered.
+        Shutdown only occurs when:
+        1. Auto-shutdown is enabled
+        2. 1000+ miners are active
+        3. Network has been stable for min_stable_time_before_shutdown (5 min)
+        4. Shutdown hasn't already been initiated
+        """
+        import os
+        import signal
+        
+        if not self.auto_shutdown_enabled:
+            return {"shutdown": False, "reason": "Auto-shutdown disabled"}
+        
+        if self.shutdown_initiated:
+            return {"shutdown": False, "reason": "Shutdown already in progress"}
+        
+        if active_miners < 1000:
+            return {"shutdown": False, "reason": f"Need 1000+ miners, currently {active_miners}"}
+        
+        if self.full_decentralization_at is None:
+            return {"shutdown": False, "reason": "Full decentralization not yet achieved"}
+        
+        stable_time = time.time() - self.full_decentralization_at
+        if stable_time < self.min_stable_time_before_shutdown:
+            remaining = self.min_stable_time_before_shutdown - stable_time
+            return {
+                "shutdown": False, 
+                "reason": f"Waiting for stability: {remaining:.0f}s remaining"
+            }
+        
+        self.shutdown_initiated = True
+        shutdown_time = time.time() + self.shutdown_grace_period
+        
+        print(f"[NeoNet] AUTOMATIC SHUTDOWN INITIATED")
+        print(f"[NeoNet] Network is fully decentralized with {active_miners} miners")
+        print(f"[NeoNet] Replit server will shutdown in {self.shutdown_grace_period} seconds")
+        print(f"[NeoNet] All operations will continue on P2P network")
+        
+        def graceful_shutdown():
+            time.sleep(self.shutdown_grace_period)
+            print("[NeoNet] Replit bootstrap server shutting down... Network continues on P2P")
+            os.kill(os.getpid(), signal.SIGTERM)
+        
+        import threading
+        shutdown_thread = threading.Thread(target=graceful_shutdown, daemon=True)
+        shutdown_thread.start()
+        
+        return {
+            "shutdown": True,
+            "reason": "Full decentralization achieved",
+            "active_miners": active_miners,
+            "stable_for_seconds": stable_time,
+            "shutdown_in_seconds": self.shutdown_grace_period,
+            "shutdown_at": shutdown_time
+        }
+    
+    def set_auto_shutdown(self, enabled: bool) -> Dict:
+        """Enable or disable automatic shutdown"""
+        self.auto_shutdown_enabled = enabled
+        return {
+            "auto_shutdown_enabled": self.auto_shutdown_enabled,
+            "message": f"Auto-shutdown {'enabled' if enabled else 'disabled'}"
         }
     
     def register_miner_capability(self, miner_id: str, capability: Dict) -> Dict:

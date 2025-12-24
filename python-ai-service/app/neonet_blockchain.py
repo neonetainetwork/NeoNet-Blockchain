@@ -1266,21 +1266,52 @@ class NeoNetBlockchain:
         """Get all deployed dApps"""
         return [asdict(d) for d in self.dapps.values()]
     
-    def get_all_nft_collections(self) -> List[Dict[str, Any]]:
+    def get_all_nft_collections(self, include_sold_out: bool = True) -> List[Dict[str, Any]]:
         """Get all NFT collections"""
-        return [asdict(c) for c in self.nft_collections.values()]
+        result = []
+        for c in self.nft_collections.values():
+            if isinstance(c, dict):
+                collection = c.copy()
+            else:
+                collection = asdict(c)
+            
+            minted = collection.get("minted", 0)
+            total_supply = collection.get("total_supply", 0)
+            remaining = max(0, total_supply - minted)
+            collection["remaining"] = remaining
+            collection["is_sold_out"] = remaining == 0
+            
+            if include_sold_out or remaining > 0:
+                result.append(collection)
+        return result
     
     def get_explore_data(self) -> Dict[str, Any]:
         """Get all network projects for Explore section"""
+        tokens_list = []
+        for t in self.tokens.values():
+            if isinstance(t, dict):
+                tokens_list.append(t)
+            else:
+                tokens_list.append(asdict(t))
+        
+        dapps_list = []
+        for d in self.dapps.values():
+            if isinstance(d, dict):
+                dapps_list.append(d)
+            else:
+                dapps_list.append(asdict(d))
+        
+        available_nfts = self.get_all_nft_collections(include_sold_out=False)
+        
         return {
-            "tokens": [asdict(t) for t in self.tokens.values()],
-            "dapps": self.get_all_dapps(),
-            "nft_collections": self.get_all_nft_collections(),
+            "tokens": tokens_list,
+            "dapps": dapps_list,
+            "nft_collections": available_nfts,
             "contracts": list(self.contracts.values()),
             "stats": {
                 "total_tokens": len(self.tokens),
                 "total_dapps": len(self.dapps),
-                "total_nfts": len(self.nft_collections),
+                "total_nfts": len(available_nfts),
                 "total_contracts": len(self.contracts)
             }
         }

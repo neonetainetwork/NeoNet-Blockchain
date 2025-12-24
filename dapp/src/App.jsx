@@ -1789,7 +1789,7 @@ function MiningTab({ wallet }) {
   const [stats, setStats] = useState(null);
   const [copied, setCopied] = useState('');
 
-  const GITHUB_REPO = 'https://github.com/neonetainetwork/neonet-miner';
+  const GITHUB_REPO = 'https://github.com/neonetainetwork/NeoNet-Blockchain';
   const MINER_DOWNLOAD = '/download/neonet_miner.py';
 
   useEffect(() => {
@@ -3310,19 +3310,19 @@ module.exports = {
               <p>All NeoNet source code is open source and available on GitHub:</p>
               
               <div style={{display: 'flex', gap: '15px', marginTop: '20px', flexWrap: 'wrap'}}>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain" target="_blank" rel="noopener noreferrer" 
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain" target="_blank" rel="noopener noreferrer" 
                    style={{...styles.downloadBtn, background: 'linear-gradient(135deg, #24292e 0%, #1f2428 100%)', padding: '15px 25px', display: 'flex', alignItems: 'center', gap: '10px'}}>
                   <span style={{fontSize: '20px'}}>📦</span> Main Repository
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/tree/main/rust-core" target="_blank" rel="noopener noreferrer"
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/tree/main/rust-core" target="_blank" rel="noopener noreferrer"
                    style={{...styles.downloadBtn, background: 'linear-gradient(135deg, #ff6b35 0%, #f7931a 100%)', padding: '15px 25px'}}>
                   Rust Core
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/tree/main/go-consensus" target="_blank" rel="noopener noreferrer"
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/tree/main/go-consensus" target="_blank" rel="noopener noreferrer"
                    style={{...styles.downloadBtn, background: 'linear-gradient(135deg, #00add8 0%, #00758d 100%)', padding: '15px 25px'}}>
                   Go Consensus
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/tree/main/python-ai-service" target="_blank" rel="noopener noreferrer"
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/tree/main/python-ai-service" target="_blank" rel="noopener noreferrer"
                    style={{...styles.downloadBtn, background: 'linear-gradient(135deg, #3776ab 0%, #ffd43b 100%)', padding: '15px 25px'}}>
                   Python AI
                 </a>
@@ -3395,13 +3395,13 @@ module.exports = {
               <h3 style={{color: '#1976d2'}}>Official GitHub Repository</h3>
               <p>Get the complete NeoNet source code and join the community:</p>
               <div style={{display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap'}}>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain" target="_blank" rel="noopener noreferrer" style={styles.downloadBtn}>
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain" target="_blank" rel="noopener noreferrer" style={styles.downloadBtn}>
                   View Source Code
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/discussions" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#238636'}}>
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/discussions" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#238636'}}>
                   Community
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/issues" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#8957e5'}}>
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/issues" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#8957e5'}}>
                   Report Issues
                 </a>
               </div>
@@ -3645,10 +3645,10 @@ WALLET = sys.argv[2] if len(sys.argv) > 2 else None
               </div>
               
               <div style={{display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap'}}>
-                <a href="https://github.com/Timur2000kdkmd/neonet-miner" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#4CAF50'}}>
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#4CAF50'}}>
                   Miner Repository
                 </a>
-                <a href="https://github.com/Timur2000kdkmd/neonet-miner/discussions" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#238636'}}>
+                <a href="https://github.com/neonetainetwork/NeoNet-Blockchain/discussions" target="_blank" rel="noopener noreferrer" style={{...styles.downloadBtn, background: '#238636'}}>
                   Miner Community
                 </a>
               </div>
@@ -3805,9 +3805,9 @@ WALLET = sys.argv[2] if len(sys.argv) > 2 else None
             <div style={styles.card}>
               <h3>Quick Links</h3>
               <ul style={styles.list}>
-                <li><a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain" target="_blank" style={{color: '#58a6ff'}}>GitHub Repository</a></li>
-                <li><a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/discussions" target="_blank" style={{color: '#58a6ff'}}>Community Discussions</a></li>
-                <li><a href="https://github.com/Timur2000kdkmd/NeoNet-Blockchain/issues" target="_blank" style={{color: '#58a6ff'}}>Issue Tracker</a></li>
+                <li><a href="https://github.com/neonetainetwork/NeoNet-Blockchain" target="_blank" style={{color: '#58a6ff'}}>GitHub Repository</a></li>
+                <li><a href="https://github.com/neonetainetwork/NeoNet-Blockchain/discussions" target="_blank" style={{color: '#58a6ff'}}>Community Discussions</a></li>
+                <li><a href="https://github.com/neonetainetwork/NeoNet-Blockchain/issues" target="_blank" style={{color: '#58a6ff'}}>Issue Tracker</a></li>
               </ul>
             </div>
           </div>

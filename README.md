@@ -215,7 +215,7 @@ MIT License - See LICENSE file for details.
 - Documentation: https://neonetainetwork.info
 - Discord: https://discord.gg/M2n7CpCH
 - Twitter: https://x.com/NeoNetainetwork
-- Telegram NeoNet-AI blockchain network
+- Telegram https://t.me/neonetainetwork
 
 ## Miner Downloads
 
